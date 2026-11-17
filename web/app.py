@@ -12,6 +12,7 @@ from collections import OrderedDict
 from contextlib import asynccontextmanager
 import asyncio
 
+from pydantic import BaseModel
 from fastapi import (
     FastAPI,
     Request,
