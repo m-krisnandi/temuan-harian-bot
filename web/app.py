@@ -17,6 +17,7 @@ try:
     from dotenv import load_dotenv
 except ImportError:
     load_dotenv = lambda *args, **kwargs: None
+from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, Request, Form, HTTPException, status, BackgroundTasks, Body, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
 from fastapi.templating import Jinja2Templates
@@ -39,6 +40,10 @@ app = FastAPI(title="Temuan Harian Control Center (SOLID & DI Architecture)")
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+STATIC_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
 def get_admin_secret(db: ProductQueueDB = Depends(get_db)) -> str:
