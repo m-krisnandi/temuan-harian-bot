@@ -1,9 +1,11 @@
 """Gemini AI Caption Engine untuk Temuan Harian.
 Menghasilkan postingan edukatif, renyah (snackable), relatable, dan bebas dari kesan iklan.
 Menggunakan Gemini API (default: gemini-3.1-flash-lite / gemini-3.8-flash).
+Bebas dari emoticon/emoji (hanya teks bersih & tanda baca standar).
 """
 import os
 import json
+import re
 import urllib.request
 import urllib.error
 from typing import Dict, Any, Optional
@@ -21,6 +23,7 @@ PRINSIP WAJIB:
 4. KAITAN FOTO KASUAL: Kaitkan gambar/produk di foto secara santai dalam 1 kalimat di bagian bawah (contoh: 'Di foto ini contoh kaus dengan struktur blend 180 GSM, kainnya tetap tegap dan ga jatuh lepek').
 5. TANPA JARGON IKLAN: Jangan pernah gunakan kata 'Rekomendasi produk', 'kurasi kami', 'link di komentar', atau ajakan beli lainnya.
 6. ANONYMITY: Jangan pernah tag siapapun dan jangan sebut identitas pribadi pengelola.
+7. TANPA EMOJI: DILARANG MENGGUNAKAN EMOJI ATAU EMOTICON APAPUN (jangan sertakan icon bintang, api, tangan, kembang api, roket, dll). Gunakan hanya teks bersih dan tanda baca standar.
 
 STRUKTUR:
 <Pertanyaan pembuka yang relatable tentang masalah sehari-hari>?
@@ -38,10 +41,21 @@ STRUKTUR:
 
 Di foto ini contoh penerapan potongannya pada <Nama Produk / Spesifikasi Singkat>, di mana <keunggulan visual utamanya>.
 
-Semoga tips singkat ini ngebantu biar ga salah pilih lagi! ✨
+Semoga tips singkat ini ngebantu biar ga salah pilih lagi!
 
 #TemuanHarian #<Hashtag1> #<Hashtag2> #<Hashtag3>
 """
+
+
+def strip_emojis(text: str) -> str:
+    """Membersihkan segala karakter emoji/emoticon dari teks."""
+    if not text:
+        return ""
+    # Hapus karakter emoji unicode
+    cleaned = re.sub(r'[\U00010000-\U0010ffff\u2600-\u27bf\u2300-\u23ff\u2b50\u26a1]', '', text)
+    # Bersihkan spasi ganda yang ditinggalkan
+    return re.sub(r' +', ' ', cleaned).strip()
+
 
 def generate_educational_caption(
     item: Dict[str, Any],
@@ -58,19 +72,16 @@ def generate_educational_caption(
 
     selected_model = model or os.getenv("GEMINI_MODEL") or DEFAULT_MODEL
 
-    price_str = f"Rp{int(item.get('price', 0)):,}".replace(",", ".") if item.get("price") else ""
     category = item.get("category", "Produk Pilihan")
     name = item.get("product_name", "Produk")
-    sales = item.get("sales", 0)
-    rating = item.get("rating", 0)
     extra_desc = item.get("description", "")
 
-    user_query = f"""Tulis postingan edukatif yang santai, renyah (snackable, pendek-pendek), dan tidak seperti iklan untuk topik/produk berikut:
+    user_query = f"""Tulis postingan edukatif yang santai, renyah (snackable, pendek-pendek), tanpa emoji sama sekali, dan tidak seperti iklan untuk topik/produk berikut:
 - Nama Produk/Referensi: {name}
 - Kategori: {category}
 - Detail Fitur/Material: {extra_desc}
 
-Tulis dalam Bahasa Indonesia santai dan to-the-point mengikuti instruksi sistem prompt."""
+Tulis dalam Bahasa Indonesia santai dan to-the-point mengikuti instruksi sistem prompt tanpa emoji."""
 
     payload = {
         "contents": [
@@ -85,7 +96,6 @@ Tulis dalam Bahasa Indonesia santai dan to-the-point mengikuti instruksi sistem 
         }
     }
 
-    # Coba model berurutan (prioritaskan responsivitas & model terbaru)
     candidate_models = []
     for m in [selected_model, "gemini-3.1-flash-lite", "gemini-3.8-flash", "gemini-2.5-flash"]:
         if m and m not in candidate_models:
@@ -107,10 +117,9 @@ Tulis dalam Bahasa Indonesia santai dan to-the-point mengikuti instruksi sistem 
                     parts = candidates[0]["content"].get("parts", [])
                     if parts and "text" in parts[0]:
                         caption = parts[0]["text"].strip()
-                        # Bersihkan markdown fence jika ada
                         if caption.startswith("```"):
                             caption = caption.strip("`").strip()
-                        return caption
+                        return strip_emojis(caption)
         except Exception:
             continue
 

@@ -3,8 +3,10 @@ Memproses:
 1. File CSV ekspor resmi Shopee Affiliate (LinkProdukSekaligus...csv).
 2. Input single link atau daftar link banyak (multi-line).
 3. Mengambil cover resmi asli penjual (Real Seller Media via WhatsApp scraper).
-4. Menghasilkan caption edukasi renyah via Gemini AI.
-5. Menjalankan Smart Market-Driven Scheduler otomatis.
+4. Menghasilkan caption edukasi renyah via Gemini AI (bebas emoji).
+5. Quality Gate: Memvalidasi rating & reputasi produk, menolak otomatis produk kualitas buruk / rating jelek.
+6. Blacklist Memory: Mencegah merk/tipe yang pernah ditolak masuk kembali.
+7. Menjalankan Smart Market-Driven Scheduler hanya untuk produk lolos kurasi.
 """
 import csv
 import io
@@ -14,6 +16,7 @@ from services.shopee_scraper import ShopeePublicScraper, detect_category
 from services.gemini_client import generate_educational_caption
 from services.captions import build_caption
 from services.smart_scheduler import SmartScheduler, MarketRanker
+from services.quality_inspector import QualityInspector
 
 
 def parse_indonesian_number(val: Any) -> float:
@@ -33,15 +36,12 @@ def parse_indonesian_number(val: Any) -> float:
 
     # Format desimal Indonesia: '278,0' -> 278.0, '44.480' -> 44480
     if "," in s and "." in s:
-        # Contoh 1.250,50
         s = s.replace(".", "").replace(",", ".")
     elif "," in s:
-        # Contoh 278,0 atau 16,5
         s = s.replace(",", ".")
     elif "." in s and not is_ribu:
-        # Contoh 44.480 (titik sebagai ribuan)
         parts = s.split(".")
-        if len(parts[-1]) == 3:  # Kemungkinan besar pemisah ribuan
+        if len(parts[-1]) == 3:
             s = s.replace(".", "")
 
     try:
@@ -50,7 +50,6 @@ def parse_indonesian_number(val: Any) -> float:
             num *= 1000.0
         return round(num, 2)
     except ValueError:
-        # Ekstrak digit saja jika gagal
         digits = re.findall(r"\d+", str(val))
         if digits:
             base = float("".join(digits))
@@ -70,7 +69,6 @@ class ShopeeBulkImporter:
         reader = csv.DictReader(io.StringIO(csv_content))
 
         for row in reader:
-            # Cari kolom yang sesuai (toleran terhadap variasi penamaan header Shopee)
             item_id = row.get("ID Produk") or row.get("item_id") or ""
             product_name = row.get("Nama Produk") or row.get("product_name") or ""
             price_raw = row.get("Harga") or row.get("price") or 0
@@ -105,7 +103,9 @@ class ShopeeBulkImporter:
                 "media_type": "IMAGE",
                 "image_url": "",
                 "video_url": "",
-                "caption": ""
+                "caption": "",
+                "rejection_reason": "",
+                "status": "PENDING"
             })
 
         return items
@@ -115,10 +115,14 @@ class ShopeeBulkImporter:
         raw_items: List[Dict[str, Any]],
         use_gemini: bool = True,
         gemini_api_key: Optional[str] = None,
+        db: Any = None,
         progress_callback=None
     ) -> List[Dict[str, Any]]:
-        """Mengambil media asli seller dan menyusun caption edukasi untuk setiap produk."""
-        enriched = []
+        """Mengambil media asli seller, memeriksa kelayakan kualitas (Quality Gate),
+        menyusun caption edukasi bebas emoji, dan menjadwalkan hanya produk yang lolos.
+        """
+        enriched_approved = []
+        enriched_rejected = []
         total = len(raw_items)
 
         for idx, it in enumerate(raw_items):
@@ -143,12 +147,35 @@ class ShopeeBulkImporter:
                 except Exception:
                     pass
 
-            # Pastikan item_id terisi
             if not it.get("item_id"):
                 import uuid
                 it["item_id"] = f"shp_{uuid.uuid4().hex[:10]}"
 
-            # 2. Generate Caption Edukatif & Natural via AI
+            # 2. Quality Gate & Blacklist Guard
+            # A. Cek memori blacklist (apakah merk/tipe ini pernah ditolak sebelumnya)
+            is_blacklisted = False
+            bl_reason = ""
+            if db:
+                is_blacklisted, bl_reason = db.is_blacklisted(it)
+
+            # B. Cek rating & kualitas produk via QualityInspector
+            q_res = QualityInspector.inspect(it)
+            if not it.get("rating") or float(it.get("rating", 0.0)) == 0.0:
+                it["rating"] = q_res["rating"]
+
+            if is_blacklisted:
+                it["status"] = "REJECTED"
+                it["rejection_reason"] = f"Ditolak otomatis (Daftar Hitam): {bl_reason}"
+                it["scheduled_at"] = ""
+            elif q_res["verdict"] == "REJECT":
+                it["status"] = "REJECTED"
+                it["rejection_reason"] = q_res["reason"]
+                it["scheduled_at"] = ""
+            else:
+                it["status"] = "APPROVED"
+                it["rejection_reason"] = ""
+
+            # 3. Generate Caption Edukatif Bebas Emoji
             if not it.get("caption"):
                 caption = None
                 if use_gemini:
@@ -160,13 +187,17 @@ class ShopeeBulkImporter:
                     caption = build_caption(it, use_ai=False)
                 it["caption"] = caption
 
-            # 3. Hitung Skor Pasar
+            # 4. Hitung Skor Pasar
             it["market_score"] = MarketRanker.calculate_score(it)
-            enriched.append(it)
+
+            if it["status"] == "REJECTED":
+                enriched_rejected.append(it)
+            else:
+                enriched_approved.append(it)
 
             if progress_callback:
                 progress_callback(idx + 1, total, it["product_name"])
 
-        # 4. Susun jadwal waktu emas otomatis (Smart Scheduling)
-        scheduled_items = SmartScheduler.schedule_batch(enriched)
-        return scheduled_items
+        # 5. Susun jadwal waktu emas otomatis hanya untuk produk yang APPROVED
+        scheduled_approved = SmartScheduler.schedule_batch(enriched_approved)
+        return scheduled_approved + enriched_rejected

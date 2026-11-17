@@ -1,12 +1,12 @@
 """Antrean produk, log aktivitas, dan pengaturan (SQLite).
 Menerapkan Prinsip SOLID:
-- Single Responsibility: Terpisah antara ProductRepository, SettingsRepository, dan ActivityLogRepository.
+- Single Responsibility: Terpisah antara ProductRepository, SettingsRepository, ActivityLogRepository, dan QualityBlacklistRepository.
 - Interface Segregation: Menerapkan IProductRepository, ISettingsRepository, IActivityLogRepository.
 - Open/Closed & Dependency Inversion: Database Connection Factory dan Repositori terisolasi.
 """
 import sqlite3
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from core.interfaces import (
     IProductRepository,
@@ -97,6 +97,87 @@ class ActivityLogRepository(IActivityLogRepository):
         )
 
 
+class QualityBlacklistRepository:
+    """Single Responsibility: Mengelola daftar hitam merk/tipe produk yang kualitasnya buruk."""
+
+    def __init__(self, conn_factory: ConnectionFactory, logger: Optional[IActivityLogRepository] = None):
+        self._conn = conn_factory
+        self._logger = logger
+
+    def add(
+        self,
+        item_id: str = "",
+        shop_name: str = "",
+        brand: str = "",
+        product_type: str = "",
+        keyword_signature: str = "",
+        reason: str = ""
+    ) -> int:
+        rowcount = self._conn.execute(
+            """
+            INSERT INTO quality_blacklist (item_id, shop_name, brand, product_type, keyword_signature, reason, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                str(item_id).strip(),
+                shop_name.strip(),
+                brand.strip().lower(),
+                product_type.strip().lower(),
+                keyword_signature.strip().lower(),
+                reason,
+                _now(),
+            )
+        )
+        if self._logger:
+            self._logger.log("BLACKLIST", f"Ditambahkan ke blacklist: [{brand or item_id}] - {reason}")
+        return rowcount
+
+    def is_blacklisted(self, item: Dict[str, Any]) -> Tuple[bool, str]:
+        item_id = str(item.get("item_id", "")).strip()
+        shop_name = str(item.get("shop_name", "")).strip().lower()
+        product_name = str(item.get("product_name", "")).strip().lower()
+        brand = str(item.get("brand", "")).strip().lower()
+
+        # 1. Cek langsung dari ID produk
+        if item_id:
+            rows = self._conn.query(
+                "SELECT reason FROM quality_blacklist WHERE item_id = ? AND item_id != ''",
+                (item_id,)
+            )
+            if rows:
+                return True, f"Produk ini masuk daftar hitam: {rows[0]['reason']}"
+
+        # 2. Cek semua aturan merk / tipe / keyword
+        rules = self._conn.query("SELECT * FROM quality_blacklist")
+        for r in rules:
+            rule_brand = (r.get("brand") or "").strip().lower()
+            rule_type = (r.get("product_type") or "").strip().lower()
+            rule_shop = (r.get("shop_name") or "").strip().lower()
+            rule_kw = (r.get("keyword_signature") or "").strip().lower()
+
+            if rule_brand and (rule_brand in product_name or (brand and rule_brand == brand)):
+                if rule_type:
+                    if rule_type in product_name:
+                        return True, f"Merk '{rule_brand}' tipe '{rule_type}' diblokir kualitas: {r['reason']}"
+                else:
+                    return True, f"Merk '{rule_brand}' diblokir karena kualitas buruk: {r['reason']}"
+
+            if rule_shop and rule_shop == shop_name and rule_type:
+                if rule_type in product_name:
+                    return True, f"Toko '{rule_shop}' untuk tipe '{rule_type}' pernah ditolak kualitasnya"
+
+            if rule_kw and rule_kw in product_name:
+                return True, f"Mengandung kata kunci yang di-blacklist '{rule_kw}': {r['reason']}"
+
+        return False, ""
+
+    def list_all(self, limit: int = 100) -> List[Dict[str, Any]]:
+        return self._conn.query("SELECT * FROM quality_blacklist ORDER BY id DESC LIMIT ?", (limit,))
+
+    def delete(self, blacklist_id: int) -> None:
+        self._conn.execute("DELETE FROM quality_blacklist WHERE id = ?", (blacklist_id,))
+
+
 class ProductRepository(IProductRepository):
     """Single Responsibility: Mengelola tabel products."""
 
@@ -114,14 +195,15 @@ class ProductRepository(IProductRepository):
     def insert(self, item: Dict[str, Any]) -> bool:
         category = item.get("category") or "Rumah Tangga & Dekorasi"
         init_status = item.get("status") or PENDING
+        rejection_reason = item.get("rejection_reason", "")
         rowcount = self._conn.execute(
             """
             INSERT OR REPLACE INTO products (
                 item_id, product_name, product_url, affiliate_link, image_url,
                 price, discount_rate, rating, sales, commission_rate, caption,
                 category, status, platform, tiktok_link, scheduled_at,
-                media_type, video_url, market_score, commission_amount, shop_name, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                media_type, video_url, market_score, commission_amount, shop_name, rejection_reason, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 str(item["item_id"]),
@@ -145,6 +227,7 @@ class ProductRepository(IProductRepository):
                 float(item.get("market_score", 0.0) or 0.0),
                 float(item.get("commission_amount", 0.0) or 0.0),
                 item.get("shop_name", ""),
+                rejection_reason,
                 _now(),
             ),
         )
@@ -154,28 +237,34 @@ class ProductRepository(IProductRepository):
 
     def approve(self, item_id: str) -> None:
         self._conn.execute(
-            "UPDATE products SET status = ?, approved_at = ? WHERE item_id = ?",
+            "UPDATE products SET status = ?, approved_at = ?, rejection_reason = '' WHERE item_id = ?",
             (APPROVED, _now(), str(item_id)),
         )
         if self._logger:
             self._logger.log("APPROVE", f"Produk disetujui ID: {item_id}")
 
-    def reject(self, item_id: str) -> None:
-        self._conn.execute("UPDATE products SET status = ? WHERE item_id = ?", (REJECTED, str(item_id)))
+    def reject(self, item_id: str, reason: str = "") -> None:
+        self._conn.execute(
+            "UPDATE products SET status = ?, rejection_reason = ?, scheduled_at = '' WHERE item_id = ?",
+            (REJECTED, reason, str(item_id))
+        )
         if self._logger:
-            self._logger.log("REJECT", f"Produk ditolak ID: {item_id}")
+            self._logger.log("REJECT", f"Produk ditolak kualitas ID {item_id}: {reason or 'Tanpa keterangan'}")
 
     def delete(self, item_id: str) -> None:
         self._conn.execute("DELETE FROM products WHERE item_id = ?", (str(item_id),))
         if self._logger:
             self._logger.log("DELETE", f"Produk dihapus ID: {item_id}")
 
+    def update_rating(self, item_id: str, rating: float) -> None:
+        self._conn.execute("UPDATE products SET rating = ? WHERE item_id = ?", (rating, str(item_id)))
+
     def update_caption(self, item_id: str, caption: str) -> None:
         self._conn.execute("UPDATE products SET caption = ? WHERE item_id = ?", (caption, str(item_id)))
 
     def update_schedule(self, item_id: str, scheduled_at: str) -> None:
         self._conn.execute(
-            "UPDATE products SET scheduled_at = ?, status = ? WHERE item_id = ?",
+            "UPDATE products SET scheduled_at = ?, status = ?, rejection_reason = '' WHERE item_id = ?",
             (scheduled_at, APPROVED, str(item_id))
         )
         if self._logger:
@@ -263,12 +352,9 @@ class ProductRepository(IProductRepository):
         )
 
     def next_approved(self) -> Optional[Dict[str, Any]]:
-        # 1. Dahulukan produk yang jadwal tayang otomatisnya (scheduled_at) sudah jatuh tempo
         due = self.get_due_scheduled()
         if due:
             return due
-
-        # 2. Jika tidak ada jadwal yang jatuh tempo, ambil produk APPROVED dengan skor pasar tertinggi
         rows = self._conn.query(
             "SELECT * FROM products WHERE status = ? ORDER BY market_score DESC, approved_at ASC LIMIT 1",
             (APPROVED,),
@@ -300,6 +386,7 @@ class ProductQueueDB:
         self.settings_repo = SettingsRepository(self._conn_factory)
         self.logs_repo = ActivityLogRepository(self._conn_factory)
         self.product_repo = ProductRepository(self._conn_factory, logger=self.logs_repo)
+        self.blacklist_repo = QualityBlacklistRepository(self._conn_factory, logger=self.logs_repo)
 
     def _connect(self) -> sqlite3.Connection:
         """Alias helper untuk koneksi langsung."""
@@ -350,6 +437,7 @@ class ProductQueueDB:
                     ("market_score", "REAL DEFAULT 0.0"),
                     ("commission_amount", "REAL DEFAULT 0.0"),
                     ("shop_name", "TEXT DEFAULT ''"),
+                    ("rejection_reason", "TEXT DEFAULT ''"),
                 ]
                 for col, col_def in columns_to_add:
                     try:
@@ -376,6 +464,20 @@ class ProductQueueDB:
                     )
                     """
                 )
+                conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS quality_blacklist (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        item_id TEXT DEFAULT '',
+                        shop_name TEXT DEFAULT '',
+                        brand TEXT DEFAULT '',
+                        product_type TEXT DEFAULT '',
+                        keyword_signature TEXT DEFAULT '',
+                        reason TEXT NOT NULL,
+                        created_at TEXT NOT NULL
+                    )
+                    """
+                )
         finally:
             if self.db_path != ":memory:":
                 conn.close()
@@ -396,6 +498,51 @@ class ProductQueueDB:
 
     def get_all_settings(self) -> Dict[str, str]:
         return self.settings_repo.get_all()
+
+    # ---- Delegasi Quality Blacklist Memory ----
+    def is_blacklisted(self, item: Dict[str, Any]) -> Tuple[bool, str]:
+        return self.blacklist_repo.is_blacklisted(item)
+
+    def add_blacklist(
+        self,
+        item_id: str = "",
+        shop_name: str = "",
+        brand: str = "",
+        product_type: str = "",
+        keyword_signature: str = "",
+        reason: str = ""
+    ) -> int:
+        return self.blacklist_repo.add(item_id, shop_name, brand, product_type, keyword_signature, reason)
+
+    def list_blacklist(self, limit: int = 100) -> List[Dict[str, Any]]:
+        return self.blacklist_repo.list_all(limit)
+
+    def delete_blacklist(self, blacklist_id: int) -> None:
+        self.blacklist_repo.delete(blacklist_id)
+
+    def reject_product_quality(self, item_id: str, reason: str = "", add_blacklist: bool = True) -> None:
+        """Menolak produk dan menyimpan jejak merk/tipenya ke memori daftar hitam."""
+        product = self.get(item_id)
+        if product and add_blacklist:
+            from services.quality_inspector import QualityInspector
+            brand, p_type = QualityInspector.extract_brand_and_type(
+                product.get("product_name", ""),
+                product.get("shop_name", "")
+            )
+            self.add_blacklist(
+                item_id=item_id,
+                shop_name=product.get("shop_name", ""),
+                brand=brand,
+                product_type=p_type,
+                reason=reason or "Kualitas produk buruk / mengecewakan pembeli"
+            )
+        self.product_repo.reject(item_id, reason=reason)
+
+    def restore_product(self, item_id: str) -> None:
+        self.product_repo.approve(item_id)
+
+    def update_rating(self, item_id: str, rating: float) -> None:
+        self.product_repo.update_rating(item_id, rating)
 
     # ---- Delegasi Produk ----
     def exists(self, item_id: str) -> bool:
@@ -434,8 +581,8 @@ class ProductQueueDB:
     def approve(self, item_id: str) -> None:
         self.product_repo.approve(item_id)
 
-    def reject(self, item_id: str) -> None:
-        self.product_repo.reject(item_id)
+    def reject(self, item_id: str, reason: str = "") -> None:
+        self.product_repo.reject(item_id, reason=reason)
 
     def delete(self, item_id: str) -> None:
         self.product_repo.delete(item_id)

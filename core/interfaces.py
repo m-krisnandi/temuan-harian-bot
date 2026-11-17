@@ -63,11 +63,15 @@ class IProductRepository(ABC):
         pass
 
     @abstractmethod
-    def reject(self, item_id: str) -> None:
+    def reject(self, item_id: str, reason: str = "") -> None:
         pass
 
     @abstractmethod
     def delete(self, item_id: str) -> None:
+        pass
+
+    @abstractmethod
+    def update_rating(self, item_id: str, rating: float) -> None:
         pass
 
     @abstractmethod

@@ -1,180 +1,89 @@
-"""Web Catalog & Central Management Dashboard for Temuan Harian.
-Subdomain: temuan-harian.pdfumi.com
-Menerapkan Prinsip SOLID & Dependency Injection (DI) dengan FastAPI.
+"""FastAPI Web Application untuk Temuan Harian.
+Menerapkan Prinsip SOLID:
+- Single Responsibility: Memisahkan routing web, webhook Meta, dan background scheduling.
+- Dependency Inversion: Menggunakan dependency injection (Depends) dari core/dependencies.py.
 """
 import os
 import secrets
-import sys
-import json
 import hashlib
-import asyncio
-from pathlib import Path
 from typing import Optional, List, Dict, Any
+from datetime import datetime, timezone, timedelta
+from contextlib import asynccontextmanager
+import asyncio
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-sys.path.append(str(BASE_DIR))
-
-try:
-    from dotenv import load_dotenv
-except ImportError:
-    load_dotenv = lambda *args, **kwargs: None
+from fastapi import (
+    FastAPI,
+    Request,
+    Depends,
+    Form,
+    File,
+    UploadFile,
+    HTTPException,
+    status,
+    Response,
+    BackgroundTasks,
+)
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi import FastAPI, Request, Form, HTTPException, status, BackgroundTasks, Body, Depends, UploadFile, File
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from database import ProductQueueDB
-from dependencies import (
+from repositories.database import ProductQueueDB, WIB
+from core.dependencies import (
     get_db,
+    get_publisher_dispatcher,
     get_caption_generator,
     get_product_scraper,
-    get_publisher_dispatcher,
     get_ads_manager,
+    get_admin_secret,
+    verify_admin,
 )
-from captions import build_comment
-from services.shopee_scraper import SHOPEE_CATEGORIES, ShopeePublicScraper
-from services.smart_scheduler import SmartScheduler, MarketRanker
-from services.bulk_importer import ShopeeBulkImporter
-
-load_dotenv(BASE_DIR / ".env")
-
-app = FastAPI(title="Temuan Harian Control Center (SOLID & DI Architecture)")
-
-TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
-TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
-templates.env.globals["build_comment"] = build_comment
-
-STATIC_DIR = Path(__file__).resolve().parent / "static"
-STATIC_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+from services.shopee_scraper import SHOPEE_CATEGORIES
+from services.captions import build_comment
+from services.smart_scheduler import SmartScheduler
+from services.quality_inspector import QualityInspector
 
 
-# ===================== BACKGROUND AUTO-PUBLISHER WORKER =====================
+# ===================== BACKGROUND SCHEDULER WORKER =====================
 
-@app.on_event("startup")
-async def start_auto_scheduler_loop():
-    """Worker latar belakang yang memeriksa jadwal waktu emas (Prime Time) setiap menit.
-    Jika produk yang dijadwalkan sudah jatuh tempo, otomatis terbit ke Facebook Page.
+async def automated_scheduler_worker():
+    """Background worker yang memeriksa antrean setiap 60 detik.
+    Jika ada produk APPROVED yang waktu scheduled_at-nya sudah tiba,
+    secara otomatis dipublikasikan ke media sosial aktif.
     """
-    async def worker():
-        await asyncio.sleep(10)  # Tunggu booting awal
-        while True:
-            try:
-                db = get_db()
-                due_item = db.get_due_scheduled()
-                if due_item:
-                    print(f"[AUTO-SCHEDULER] Menerbitkan produk jadwal {due_item.get('scheduled_at')}: {due_item.get('product_name')}")
-                    _publish_product_to_channels(db, due_item)
-            except Exception as e:
-                print(f"[AUTO-SCHEDULER] Worker error: {e}")
-            await asyncio.sleep(60)
-
-    asyncio.create_task(worker())
+    db_path = os.getenv("TEMUAN_DB", "temuan_harian.db")
+    print(f"[SCHEDULER] Background worker aktif memantau antrean di {db_path}...")
+    while True:
+        try:
+            db = ProductQueueDB(db_path)
+            due_product = db.get_due_scheduled()
+            if due_product:
+                print(f"[SCHEDULER] Menemukan produk jatuh tempo: {due_product['product_name'][:40]} (Jadwal: {due_product.get('scheduled_at')})")
+                _publish_product_to_channels(db, due_product)
+        except Exception as e:
+            print(f"[SCHEDULER ERROR] {e}")
+        await asyncio.sleep(60)
 
 
-def get_admin_secret(db: ProductQueueDB = Depends(get_db)) -> str:
-    secret = db.get_setting("admin_secret") or os.getenv("ADMIN_SECRET", "")
-    if not secret:
-        secret = secrets.token_hex(6)
-        db.set_setting("admin_secret", secret)
-        print(f"[AUTH] Password admin otomatis dibuat: {secret}")
-    return secret
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Start scheduler task in background
+    scheduler_task = asyncio.create_task(automated_scheduler_worker())
+    yield
+    scheduler_task.cancel()
 
 
-def verify_admin(request: Request, db: ProductQueueDB = Depends(get_db)) -> bool:
-    token = request.cookies.get("admin_token") or request.query_params.get("key")
-    return token == get_admin_secret(db)
+app = FastAPI(title="Temuan Harian Hub", version="2.5.0", lifespan=lifespan)
+
+# Setup Templates & Static Assets
+templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
-# ===================== META & THREADS OAUTH CALLBACKS =====================
+# ===================== KATALOG PUBLIK =====================
 
-@app.get("/auth/threads/callback")
-async def threads_oauth_callback(code: Optional[str] = None, error: Optional[str] = None):
-    """Menangani pengalihan OAuth dari Threads API Meta."""
-    if error:
-        return HTMLResponse(f"<h3>Otorisasi Threads Dibatalkan: {error}</h3><p><a href='/admin?tab=settings'>Kembali ke Dashboard</a></p>", status_code=400)
-    return HTMLResponse(
-        f"""
-        <div style="font-family: sans-serif; padding: 2rem; max-width: 600px; margin: auto;">
-            <h2>Otorisasi Threads Berhasil</h2>
-            <p>Kode otorisasi berhasil diterima:</p>
-            <pre style="background: #f1f5f9; padding: 1rem; border-radius: 8px;">{code}</pre>
-            <p>Salin kode ini ke Dashboard Admin atau gunakan Generator Token Pengguna di Meta App.</p>
-            <a href="/admin?tab=settings" style="display: inline-block; padding: 0.5rem 1rem; background: #4f46e5; color: white; text-decoration: none; border-radius: 6px;">Ke Pengaturan Admin</a>
-        </div>
-        """
-    )
-
-
-@app.api_route("/auth/threads/deauth", methods=["GET", "POST"])
-async def threads_deauth_callback(request: Request, db: ProductQueueDB = Depends(get_db)):
-    """Endpoint Deauthorize yang dipanggil Meta ketika pengguna mencabut akses aplikasi."""
-    db.log_activity("THREADS_DEAUTH", "Aplikasi Threads diputus atau dideotorisasi oleh pengguna.", status="INFO")
-    return JSONResponse({"status": "success", "message": "Deauthorization acknowledged"})
-
-
-@app.api_route("/auth/threads/delete", methods=["GET", "POST"])
-async def threads_delete_callback(request: Request, db: ProductQueueDB = Depends(get_db)):
-    """Endpoint Data Deletion Request Callback sesuai ketentuan privasi Meta."""
-    confirmation_code = hashlib.sha256(secrets.token_bytes(16)).hexdigest()[:12]
-    db.log_activity("DATA_DELETE", f"Permintaan penghapusan data Meta diterima. Kode: {confirmation_code}", status="INFO")
-    return JSONResponse({
-        "url": f"https://temuan-harian.pdfumi.com/auth/threads/delete-status?code={confirmation_code}",
-        "confirmation_code": confirmation_code
-    })
-
-
-@app.get("/auth/threads/delete-status")
-async def threads_delete_status(code: Optional[str] = None):
-    return HTMLResponse(f"<h3>Status Permintaan Penghapusan Data: SELESAI</h3><p>Kode Konfirmasi: {code}</p>")
-
-
-# ===================== META FACEBOOK & INSTAGRAM WEBHOOKS =====================
-
-@app.get("/webhooks/facebook")
-async def meta_webhook_verification(request: Request, db: ProductQueueDB = Depends(get_db)):
-    """Verifikasi webhook resmi dari Meta (Facebook Page, Ad Account, Instagram)."""
-    mode = request.query_params.get("hub.mode")
-    challenge = request.query_params.get("hub.challenge")
-    token = request.query_params.get("hub.verify_token")
-
-    expected_token = db.get_setting("meta_webhook_verify_token") or os.getenv("META_WEBHOOK_VERIFY_TOKEN", "temuan_harian_secret_token")
-
-    if mode == "subscribe" and token == expected_token:
-        print("[WEBHOOK] Meta Webhook verified successfully!")
-        return Response(content=challenge, media_type="text/plain")
-    return HTMLResponse("Forbidden: Verification Token Mismatch", status_code=403)
-
-
-@app.post("/webhooks/facebook")
-async def meta_webhook_events(request: Request, db: ProductQueueDB = Depends(get_db)):
-    """Menerima event real-time dari Meta jika berlangganan field (misal: feed, mentions, comments)."""
-    try:
-        data = await request.json()
-        obj_type = data.get("object", "unknown")
-        db.log_activity("WEBHOOK_EVENT", f"Menerima event webhook [{obj_type}] dari Meta.", status="INFO")
-    except Exception:
-        pass
-    return JSONResponse({"status": "EVENT_RECEIVED"})
-
-
-# ===================== SCRAPER PREVIEW API =====================
-
-@app.post("/api/scrape-preview")
-async def api_scrape_preview(request: Request, payload: Dict[str, str] = Body(...)):
-    """Mengekstrak data judul, cover foto resmi, dan estimasi harga dari link Shopee via IProductScraper."""
-    url = payload.get("url", "").strip()
-    if not url:
-        raise HTTPException(status_code=400, detail="URL diperlukan")
-    scraper = get_product_scraper()
-    data = scraper.scrape_preview(url)
-    return JSONResponse(data)
-
-
-# ===================== PUBLIK (Katalog Bersih) =====================
-
-@app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
+@app.get("/", response_class=HTMLResponse)
 async def public_catalog(
     request: Request,
     q: Optional[str] = None,
@@ -222,6 +131,82 @@ async def public_catalog(
     )
 
 
+# ===================== META & THREADS OAUTH CALLBACKS =====================
+
+@app.get("/auth/threads/callback")
+async def threads_oauth_callback(code: Optional[str] = None, error: Optional[str] = None):
+    if error:
+        return HTMLResponse(f"<h3>Otorisasi Threads Dibatalkan: {error}</h3><p><a href='/admin?tab=settings'>Kembali ke Dashboard</a></p>", status_code=400)
+    return HTMLResponse(
+        f"""
+        <div style="font-family: sans-serif; padding: 2rem; max-width: 600px; margin: auto;">
+            <h2>Otorisasi Threads Berhasil</h2>
+            <p>Kode otorisasi berhasil diterima:</p>
+            <pre style="background: #f1f5f9; padding: 1rem; border-radius: 8px;">{code}</pre>
+            <p>Salin kode ini ke Dashboard Admin atau gunakan Generator Token Pengguna di Meta App.</p>
+            <a href="/admin?tab=settings" style="display: inline-block; padding: 0.5rem 1rem; background: #4f46e5; color: white; text-decoration: none; border-radius: 6px;">Ke Pengaturan Admin</a>
+        </div>
+        """
+    )
+
+
+@app.api_route("/auth/threads/deauth", methods=["GET", "POST"])
+async def threads_deauth_callback(request: Request, db: ProductQueueDB = Depends(get_db)):
+    db.log_activity("THREADS_DEAUTH", "Aplikasi Threads diputus atau dideotorisasi oleh pengguna.", status="INFO")
+    return JSONResponse({"status": "success", "message": "Deauthorization acknowledged"})
+
+
+@app.api_route("/auth/threads/delete", methods=["GET", "POST"])
+async def threads_delete_callback(request: Request, db: ProductQueueDB = Depends(get_db)):
+    confirmation_code = hashlib.sha256(secrets.token_bytes(16)).hexdigest()[:12]
+    db.log_activity("DATA_DELETE", f"Permintaan penghapusan data Meta diterima. Kode: {confirmation_code}", status="INFO")
+    return JSONResponse({
+        "url": f"https://temuan-harian.pdfumi.com/auth/threads/delete-status?code={confirmation_code}",
+        "confirmation_code": confirmation_code
+    })
+
+
+@app.get("/auth/threads/delete-status")
+async def threads_delete_status(code: Optional[str] = None):
+    return HTMLResponse(f"<h3>Status Permintaan Penghapusan Data: SELESAI</h3><p>Kode Konfirmasi: {code}</p>")
+
+
+# ===================== META FACEBOOK & INSTAGRAM WEBHOOKS =====================
+
+@app.get("/webhooks/facebook")
+async def meta_webhook_verification(request: Request, db: ProductQueueDB = Depends(get_db)):
+    mode = request.query_params.get("hub.mode")
+    challenge = request.query_params.get("hub.challenge")
+    token = request.query_params.get("hub.verify_token")
+
+    expected_token = db.get_setting("meta_webhook_verify_token") or os.getenv("META_WEBHOOK_VERIFY_TOKEN", "temuan_harian_secret_token")
+
+    if mode == "subscribe" and token == expected_token:
+        print("[WEBHOOK] Meta Webhook verified successfully!")
+        return Response(content=challenge, media_type="text/plain")
+    return HTMLResponse("Forbidden: Verification Token Mismatch", status_code=403)
+
+
+@app.post("/webhooks/facebook")
+async def meta_webhook_event_handler(request: Request, db: ProductQueueDB = Depends(get_db)):
+    try:
+        body = await request.json()
+        obj = body.get("object")
+        entries = body.get("entry", [])
+
+        for entry in entries:
+            entry_id = entry.get("id")
+            for change in entry.get("changes", []):
+                field = change.get("field")
+                val = change.get("value")
+                db.log_activity("WEBHOOK_EVENT", f"Meta Webhook [{obj} ID:{entry_id}] field: {field}", status="INFO")
+
+        return JSONResponse({"status": "EVENT_RECEIVED"})
+    except Exception as e:
+        db.log_activity("WEBHOOK_ERROR", f"Error memproses webhook: {str(e)}", status="FAILED")
+        return JSONResponse({"status": "ERROR"}, status_code=400)
+
+
 # ===================== ADMIN DASHBOARD & MONITORING =====================
 
 @app.api_route("/admin", methods=["GET", "HEAD"], response_class=HTMLResponse)
@@ -242,6 +227,7 @@ async def admin_dashboard(
     metrics = db.get_metrics()
     logs = db.list_logs(limit=25)
     settings = db.get_all_settings()
+    blacklist_items = db.list_blacklist(limit=50)
 
     chart_labels = [d["label"] for d in metrics["weekly_activity"]]
     chart_posted = [d["count"] for d in metrics["weekly_activity"]]
@@ -265,6 +251,7 @@ async def admin_dashboard(
             "metrics": metrics,
             "products": products,
             "scheduled_items": scheduled_items,
+            "blacklist_items": blacklist_items,
             "logs": logs,
             "settings": settings,
             "categories": SHOPEE_CATEGORIES,
@@ -299,7 +286,7 @@ async def admin_logout():
 # ===================== KONTROL & AKSI PRODUK =====================
 
 def _publish_product_to_channels(db: ProductQueueDB, item: Dict[str, Any]) -> str:
-    """Mempublikasikan produk ke seluruh channel aktif via PublisherDispatcher (Dependency Inversion)."""
+    """Mempublikasikan produk ke seluruh channel aktif via PublisherDispatcher."""
     dispatcher = get_publisher_dispatcher(db=db)
     comment_text = build_comment(item)
     result = dispatcher.dispatch(
@@ -318,16 +305,17 @@ def _publish_product_to_channels(db: ProductQueueDB, item: Dict[str, Any]) -> st
         db.mark_comment_done(item["item_id"])
         return result.summary()
     else:
-        err_msg = result.summary()
+        err_msg = "; ".join(result.errors)
         db.set_error(item["item_id"], err_msg)
-        return err_msg
+        return f"Gagal publikasi: {err_msg}"
 
 
 @app.post("/admin/action")
-async def admin_product_action(
+async def admin_action(
     request: Request,
     item_id: str = Form(...),
     action: str = Form(...),
+    reason: Optional[str] = Form(""),
     redirect_tab: str = Form("products"),
     db: ProductQueueDB = Depends(get_db)
 ):
@@ -338,7 +326,7 @@ async def admin_product_action(
         db.approve(item_id)
         msg = f"Produk {item_id} berhasil disetujui (APPROVED)"
     elif action == "reject":
-        db.reject(item_id)
+        db.reject(item_id, reason=reason or "Ditolak manual oleh admin")
         msg = f"Produk {item_id} ditandai ditolak"
     elif action == "delete":
         db.delete(item_id)
@@ -351,6 +339,57 @@ async def admin_product_action(
     else:
         msg = "Aksi tidak dikenali"
 
+    return RedirectResponse(url=f"/admin?tab={redirect_tab}&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.post("/admin/action/reject-quality")
+async def admin_reject_quality(
+    request: Request,
+    item_id: str = Form(...),
+    reason: str = Form("Kualitas produk buruk / rating rendah"),
+    add_blacklist: bool = Form(True),
+    redirect_tab: str = Form("products"),
+    db: ProductQueueDB = Depends(get_db)
+):
+    """Menolak produk karena kualitas buruk dan memasukkannya ke memori daftar hitam."""
+    if not verify_admin(request, db):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    db.reject_product_quality(item_id, reason=reason.strip(), add_blacklist=add_blacklist)
+    msg = f"Produk berhasil ditolak ke tab 'Ditolak / Kualitas Rendah' dan merk dimasukkan daftar hitam."
+    return RedirectResponse(url=f"/admin?tab={redirect_tab}&status_filter=REJECTED&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.post("/admin/action/restore")
+async def admin_restore_product(
+    request: Request,
+    item_id: str = Form(...),
+    redirect_tab: str = Form("products"),
+    db: ProductQueueDB = Depends(get_db)
+):
+    """Memulihkan produk dari status REJECTED kembali ke APPROVED."""
+    if not verify_admin(request, db):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    db.restore_product(item_id)
+    msg = f"Produk {item_id} berhasil dipulihkan ke status disetujui."
+    return RedirectResponse(url=f"/admin?tab={redirect_tab}&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.post("/admin/action/update-rating")
+async def admin_update_rating(
+    request: Request,
+    item_id: str = Form(...),
+    rating: float = Form(...),
+    redirect_tab: str = Form("products"),
+    db: ProductQueueDB = Depends(get_db)
+):
+    """Memperbarui rating produk secara manual."""
+    if not verify_admin(request, db):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    db.update_rating(item_id, float(rating))
+    msg = f"Rating produk berhasil diperbarui menjadi {rating:.1f}"
     return RedirectResponse(url=f"/admin?tab={redirect_tab}&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -392,8 +431,9 @@ async def admin_single_link_import(
     auto_approve: bool = Form(True),
     db: ProductQueueDB = Depends(get_db)
 ):
-    """Input 1 link Shopee saja -> AI otomatis mencari foto/video asli seller,
-    membuat caption edukasi renyah, dan mengalokasikan jadwal waktu emas posting.
+    """Input 1 link Shopee saja -> AI mengambil foto/video asli seller,
+    memvalidasi rating/kredibilitas (Quality Gate), membuat caption edukasi renyah tanpa emoji,
+    dan mengalokasikan jadwal posting jika lolos kurasi.
     """
     if not verify_admin(request, db):
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -415,26 +455,44 @@ async def admin_single_link_import(
         "media_type": scraped.get("media_type", "IMAGE"),
         "price": scraped.get("price", 0),
         "discount_rate": 0,
-        "rating": 5.0,
+        "rating": 0.0,
         "sales": 1000,
         "commission_rate": 10.0,
         "commission_amount": scraped.get("price", 0) * 0.1,
         "category": scraped.get("category", "Rumah Tangga & Dekorasi"),
         "platform": "SHOPEE",
         "status": "APPROVED" if auto_approve else "PENDING",
+        "rejection_reason": "",
+        "caption": ""
     }
 
-    # Generate caption edukasi santai & natural
-    caption_gen = get_caption_generator(db=db, use_ai=use_gemini)
-    item["caption"] = caption_gen.generate(item)
+    # Quality Gate & Blacklist Guard
+    is_bl, bl_reason = db.is_blacklisted(item)
+    q_res = QualityInspector.inspect(item)
+    item["rating"] = q_res["rating"]
 
-    # Jadwalkan slot waktu emas otomatis
-    scheduled = SmartScheduler.schedule_batch([item])
-    final_item = scheduled[0] if scheduled else item
+    if is_bl:
+        item["status"] = "REJECTED"
+        item["rejection_reason"] = f"Ditolak otomatis (Daftar Hitam): {bl_reason}"
+        item["scheduled_at"] = ""
+    elif q_res["verdict"] == "REJECT":
+        item["status"] = "REJECTED"
+        item["rejection_reason"] = q_res["reason"]
+        item["scheduled_at"] = ""
+    else:
+        # Generate caption edukasi santai & natural tanpa emoji
+        caption_gen = get_caption_generator(db=db, use_ai=use_gemini)
+        item["caption"] = caption_gen.generate(item)
+        scheduled = SmartScheduler.schedule_batch([item])
+        item = scheduled[0] if scheduled else item
 
-    db.insert_product(final_item)
-    msg = f"Produk '{final_item['product_name'][:35]}' berhasil dijadwalkan pada {final_item.get('scheduled_at')}!"
-    return RedirectResponse(url=f"/admin?tab=products&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)
+    db.insert_product(item)
+    if item["status"] == "REJECTED":
+        msg = f"Perhatian: Produk '{item['product_name'][:30]}' DITOLAK ke tab Kualitas Rendah ({item['rejection_reason']})"
+        return RedirectResponse(url=f"/admin?tab=products&status_filter=REJECTED&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)
+    else:
+        msg = f"Produk '{item['product_name'][:30]}' lolos kurasi & dijadwalkan pada {item.get('scheduled_at')}!"
+        return RedirectResponse(url=f"/admin?tab=products&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)
 
 
 # ===================== FITUR 2: BULK IMPORT (CSV & MULTI-LINK) =====================
@@ -446,8 +504,8 @@ def _bg_run_bulk_import(
     use_gemini: bool,
     db_path: str = "temuan_harian.db"
 ):
-    """Proses latar belakang agar browser tidak hang saat memproses 20-100 produk sekaligus."""
-    from database import ProductQueueDB
+    """Proses latar belakang dengan Quality Gate terintegrasi."""
+    from repositories.database import ProductQueueDB
     from services.bulk_importer import ShopeeBulkImporter
     db = ProductQueueDB(db_path)
     importer = ShopeeBulkImporter()
@@ -477,19 +535,27 @@ def _bg_run_bulk_import(
         db.log_activity("BULK_IMPORT", "Gagal impor massal: Tidak ada data valid yang ditemukan.", status="FAILED")
         return
 
-    db.log_activity("BULK_IMPORT", f"Memulai impor massal {len(items)} produk Shopee...", status="INFO")
+    db.log_activity("BULK_IMPORT", f"Memulai impor massal {len(items)} produk dengan Quality Gate...", status="INFO")
 
     api_key = db.get_setting("gemini_api_key") or os.getenv("GEMINI_API_KEY")
-    enriched = importer.process_and_enrich(items, use_gemini=use_gemini, gemini_api_key=api_key)
+    enriched = importer.process_and_enrich(items, use_gemini=use_gemini, gemini_api_key=api_key, db=db)
 
-    success_count = 0
+    approved_count = 0
+    rejected_count = 0
     for it in enriched:
-        if auto_approve:
+        if it.get("status") != "REJECTED" and auto_approve:
             it["status"] = "APPROVED"
         if db.insert_product(it):
-            success_count += 1
+            if it.get("status") == "REJECTED":
+                rejected_count += 1
+            else:
+                approved_count += 1
 
-    db.log_activity("BULK_IMPORT", f"Selesai: {success_count}/{len(items)} produk berhasil diimpor & dijadwalkan otomatis.", status="SUCCESS")
+    db.log_activity(
+        "BULK_IMPORT",
+        f"Impor selesai: {approved_count} produk dijadwalkan, {rejected_count} produk kualitas buruk dipisahkan ke tab Ditolak.",
+        status="SUCCESS"
+    )
 
 
 @app.post("/admin/bulk-import")
@@ -525,7 +591,7 @@ async def admin_bulk_import(
         db_path
     )
 
-    msg = "Impor+massal+sedang+diproses+di+latar+belakang.+Foto+resmi+penjual,+caption+edukasi+AI,+dan+jadwal+waktu+emas+akan+muncul+bertahap."
+    msg = "Impor massal sedang diproses di latar belakang dengan Quality Gate. Produk rating jelek akan otomatis dipisahkan."
     return RedirectResponse(url=f"/admin?tab=products&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)
 
 
@@ -534,95 +600,69 @@ async def admin_quick_add(
     request: Request,
     name: str = Form(...),
     url: str = Form(...),
-    image_url: str = Form(...),
-    category: str = Form("Rumah Tangga & Dekorasi"),
-    platform: str = Form("SHOPEE"),
-    tiktok_link: str = Form(""),
+    affiliate_link: str = Form(...),
     price: float = Form(0),
-    discount: float = Form(0),
     rating: float = Form(5.0),
-    sales: int = Form(100),
-    use_gemini: bool = Form(True),
-    custom_caption: str = Form(""),
-    auto_approve: bool = Form(False),
+    sales: int = Form(0),
+    category: str = Form("Rumah Tangga & Dekorasi"),
+    image_url: Optional[str] = Form(None),
+    platform: str = Form("SHOPEE"),
+    use_ai: bool = Form(True),
+    auto_approve: bool = Form(True),
     db: ProductQueueDB = Depends(get_db)
 ):
     if not verify_admin(request, db):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    import time
-    item_id = f"m_{int(time.time())}"
+    scraper = get_product_scraper()
+    scraped = scraper.scrape_preview(url.strip())
+
     item = {
-        "item_id": item_id,
-        "product_name": name.strip(),
+        "item_id": scraped["item_id"],
+        "product_name": name.strip() or scraped["product_name"],
         "product_url": url.strip(),
-        "affiliate_link": url.strip(),
-        "image_url": image_url.strip(),
-        "category": category.strip(),
-        "platform": platform.upper(),
-        "tiktok_link": tiktok_link.strip(),
-        "price": price,
-        "discount_rate": discount,
+        "affiliate_link": affiliate_link.strip(),
+        "image_url": image_url.strip() if image_url else scraped["image_url"],
+        "video_url": scraped.get("video_url", ""),
+        "media_type": scraped.get("media_type", "IMAGE"),
+        "price": price or scraped["price"],
+        "discount_rate": 0,
         "rating": rating,
         "sales": sales,
-        "commission_rate": 0.0,
+        "commission_rate": 10.0,
+        "commission_amount": (price or scraped["price"]) * 0.1,
+        "category": category or scraped["category"],
+        "platform": platform,
+        "status": "APPROVED" if auto_approve else "PENDING",
     }
 
-    if custom_caption.strip():
-        item["caption"] = custom_caption.strip()
+    # Quality Gate
+    q_res = QualityInspector.inspect(item)
+    if q_res["verdict"] == "REJECT":
+        item["status"] = "REJECTED"
+        item["rejection_reason"] = q_res["reason"]
+        item["scheduled_at"] = ""
     else:
-        caption_gen = get_caption_generator(db=db, use_ai=use_gemini)
+        caption_gen = get_caption_generator(db=db, use_ai=use_ai)
         item["caption"] = caption_gen.generate(item)
+        scheduled = SmartScheduler.schedule_batch([item])
+        item = scheduled[0] if scheduled else item
 
-    if db.insert_product(item):
-        if auto_approve:
-            db.approve(item_id)
-            msg = f"Produk [{platform.upper()}] kategori '{category}' berhasil ditambahkan & disetujui!"
-        else:
-            msg = f"Produk [{platform.upper()}] kategori '{category}' berhasil masuk antrean PENDING."
-    else:
-        msg = "Produk sudah ada di dalam database."
-
-    return RedirectResponse(url=f"/admin?tab=products&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)
+    db.insert_product(item)
+    return RedirectResponse(url="/admin?tab=products&msg=Produk+berhasil+ditambahkan", status_code=status.HTTP_303_SEE_OTHER)
 
 
-# ===================== KONTROL OTOMASI LATAR BELAKANG =====================
-
-def _bg_run_scout(auto_approve: bool = False):
-    from scout_viral import run_viral_discovery
-    try:
-        run_viral_discovery(auto_approve=auto_approve)
-    except Exception as e:
-        db = get_db()
-        db.log_activity("SCOUT_ERROR", f"Error pada auto-scout: {e}", status="FAILED")
-
-
-@app.post("/admin/trigger/scout")
-async def trigger_scout(
-    request: Request,
-    background_tasks: BackgroundTasks,
-    auto_approve: bool = Form(False),
-    db: ProductQueueDB = Depends(get_db)
-):
+@app.post("/admin/trigger/scheduler")
+async def trigger_scheduler_manual(request: Request, db: ProductQueueDB = Depends(get_db)):
     if not verify_admin(request, db):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    background_tasks.add_task(_bg_run_scout, auto_approve)
-    db.log_activity("TRIGGER_SCOUT", "Proses Auto-Scout produk viral dijalankan di latar belakang.")
-    return RedirectResponse(url="/admin?tab=logs&msg=Auto-Scout+sedang+berjalan+di+latar+belakang.+Cek+tab+Log+Aktivitas+dalam+beberapa+saat.", status_code=status.HTTP_303_SEE_OTHER)
+    product = db.next_approved()
+    if not product:
+        return RedirectResponse(url="/admin?msg=Tidak+ada+produk+dalam+antrean+siap+posting", status_code=status.HTTP_303_SEE_OTHER)
 
-
-@app.post("/admin/trigger/publish-next")
-async def trigger_publish_next(request: Request, db: ProductQueueDB = Depends(get_db)):
-    if not verify_admin(request, db):
-        raise HTTPException(status_code=401, detail="Unauthorized")
-
-    item = db.next_approved()
-    if not item:
-        return RedirectResponse(url="/admin?tab=dashboard&msg=Tidak+ada+produk+berstatus+APPROVED+yang+siap+diposting.", status_code=status.HTTP_303_SEE_OTHER)
-
-    msg = _publish_product_to_channels(db, item)
-    return RedirectResponse(url=f"/admin?tab=dashboard&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)
+    summary = _publish_product_to_channels(db, product)
+    return RedirectResponse(url=f"/admin?msg={summary}", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @app.post("/admin/trigger/retry-comments")
@@ -630,104 +670,51 @@ async def trigger_retry_comments(request: Request, db: ProductQueueDB = Depends(
     if not verify_admin(request, db):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    items = db.list_comment_pending()
-    if not items:
-        return RedirectResponse(url="/admin?tab=logs&msg=Tidak+ada+komentar+yang+tertunda.", status_code=status.HTTP_303_SEE_OTHER)
+    pending_comments = db.list_comment_pending()
+    if not pending_comments:
+        return RedirectResponse(url="/admin?tab=logs&msg=Tidak+ada+komentar+tertunda", status_code=status.HTTP_303_SEE_OTHER)
 
     dispatcher = get_publisher_dispatcher(db=db)
     success = 0
-    for it in items:
-        comment_text = build_comment(it)
-        if it.get("fb_post_id"):
-            for pub in dispatcher.publishers:
-                if pub.platform_name == "Facebook Page":
-                    try:
-                        pub.add_comment(it["fb_post_id"], comment_text)
-                        db.mark_comment_done(it["item_id"])
-                        success += 1
-                    except Exception as e:
-                        db.set_error(it["item_id"], f"retry komentar gagal: {e}")
+    for item in pending_comments:
+        comment_text = build_comment(item)
+        if dispatcher.dispatch_comment(item.get("fb_post_id", ""), comment_text):
+            db.mark_comment_done(item["item_id"])
+            success += 1
 
-    msg = f"Selesai: {success}/{len(items)} komentar berhasil diperbarui."
-    return RedirectResponse(url=f"/admin?tab=logs&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url=f"/admin?tab=logs&msg={success}+komentar+berhasil+diposting", status_code=status.HTTP_303_SEE_OTHER)
 
 
-# ===================== PENGATURAN SISTEM =====================
+@app.post("/admin/settings")
+async def update_settings(request: Request, db: ProductQueueDB = Depends(get_db)):
+    if not verify_admin(request, db):
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
-@app.post("/admin/settings/save")
-async def save_settings(
+    form_data = await request.form()
+    for key, val in form_data.items():
+        if key not in ["csrf_token", "action"]:
+            db.set_setting(key, str(val).strip())
+
+    return RedirectResponse(url="/admin?tab=settings&msg=Pengaturan+berhasil+disimpan", status_code=status.HTTP_303_SEE_OTHER)
+
+
+# ===================== META ADS MARKETING API =====================
+
+@app.post("/admin/ads/create-campaign")
+async def create_ad_campaign(
     request: Request,
-    shopee_affiliate_id: str = Form(""),
-    tiktok_affiliate_id: str = Form(""),
-    channel_fb_enabled: str = Form("0"),
-    channel_threads_enabled: str = Form("0"),
-    channel_ig_enabled: str = Form("0"),
-    post_frequency_per_day: int = Form(3),
-    post_schedule_times: str = Form("08:00, 12:30, 19:30"),
-    gemini_api_key: str = Form(""),
-    gemini_model: str = Form("gemini-3.8-flash"),
-    fb_page_id: str = Form(""),
-    fb_page_access_token: str = Form(""),
-    threads_app_id: str = Form(""),
-    threads_app_secret: str = Form(""),
-    threads_user_id: str = Form(""),
-    threads_access_token: str = Form(""),
-    ig_user_id: str = Form(""),
-    ig_access_token: str = Form(""),
-    meta_ad_account_id: str = Form(""),
-    meta_webhook_verify_token: str = Form(""),
-    min_sales: int = Form(300),
-    min_rating: float = Form(4.8),
-    auto_scout_keywords: str = Form(""),
-    admin_secret: str = Form(""),
-    auto_approve_scouted: str = Form("0"),
+    campaign_name: str = Form(...),
+    daily_budget: int = Form(50000),
     db: ProductQueueDB = Depends(get_db)
 ):
     if not verify_admin(request, db):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    db.set_setting("shopee_affiliate_id", shopee_affiliate_id.strip())
-    db.set_setting("tiktok_affiliate_id", tiktok_affiliate_id.strip())
-    db.set_setting("channel_fb_enabled", "1" if channel_fb_enabled == "1" else "0")
-    db.set_setting("channel_threads_enabled", "1" if channel_threads_enabled == "1" else "0")
-    db.set_setting("channel_ig_enabled", "1" if channel_ig_enabled == "1" else "0")
-    db.set_setting("post_frequency_per_day", str(post_frequency_per_day))
-    db.set_setting("max_posts_per_day", str(post_frequency_per_day))
-    db.set_setting("post_schedule_times", post_schedule_times.strip())
-    if gemini_api_key.strip():
-        db.set_setting("gemini_api_key", gemini_api_key.strip())
-    db.set_setting("gemini_model", gemini_model.strip())
+    manager = get_ads_manager(db=db)
+    try:
+        camp_id = manager.create_traffic_campaign(campaign_name, daily_budget_idr=daily_budget)
+        msg = f"Kampanye+iklan+berhasil+dibuat+(ID:+{camp_id})"
+    except Exception as e:
+        msg = f"Gagal+membuat+iklan:+{str(e)}"
 
-    if fb_page_id.strip():
-        db.set_setting("fb_page_id", fb_page_id.strip())
-    if fb_page_access_token.strip():
-        db.set_setting("fb_page_access_token", fb_page_access_token.strip())
-
-    if threads_app_id.strip():
-        db.set_setting("threads_app_id", threads_app_id.strip())
-    if threads_app_secret.strip():
-        db.set_setting("threads_app_secret", threads_app_secret.strip())
-    if threads_user_id.strip():
-        db.set_setting("threads_user_id", threads_user_id.strip())
-    if threads_access_token.strip():
-        db.set_setting("threads_access_token", threads_access_token.strip())
-
-    if ig_user_id.strip():
-        db.set_setting("ig_user_id", ig_user_id.strip())
-    if ig_access_token.strip():
-        db.set_setting("ig_access_token", ig_access_token.strip())
-
-    if meta_ad_account_id.strip():
-        db.set_setting("meta_ad_account_id", meta_ad_account_id.strip())
-    if meta_webhook_verify_token.strip():
-        db.set_setting("meta_webhook_verify_token", meta_webhook_verify_token.strip())
-
-    db.set_setting("min_sales", str(min_sales))
-    db.set_setting("min_rating", str(min_rating))
-    db.set_setting("auto_scout_keywords", auto_scout_keywords.strip())
-    if admin_secret.strip():
-        db.set_setting("admin_secret", admin_secret.strip())
-    db.set_setting("auto_approve_scouted", "1" if auto_approve_scouted == "1" else "0")
-
-    db.log_activity("SETTINGS_SAVE", "Konfigurasi sistem & kredensial Meta berhasil diperbarui.")
-    return RedirectResponse(url="/admin?tab=settings&msg=Pengaturan+berhasil+disimpan", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url=f"/admin?tab=settings&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)

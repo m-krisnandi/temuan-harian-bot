@@ -232,15 +232,15 @@
                         </p>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-[11px]">
                             <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800/80">
-                                <span class="font-bold text-amber-400 block mb-0.5">🌅 Pagi: 07:30 – 08:30 WIB</span>
+                                <span class="font-bold text-amber-400 block mb-0.5 flex items-center gap-1.5"><i data-lucide="sun" class="w-3.5 h-3.5"></i> Pagi: 07:30 – 08:30 WIB</span>
                                 <span class="text-slate-400 text-[10px]">Perjalanan ke kantor/kampus dan waktu sarapan santai.</span>
                             </div>
                             <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800/80">
-                                <span class="font-bold text-emerald-400 block mb-0.5">☀️ Siang: 12:00 – 13:00 WIB</span>
+                                <span class="font-bold text-emerald-400 block mb-0.5 flex items-center gap-1.5"><i data-lucide="coffee" class="w-3.5 h-3.5"></i> Siang: 12:00 – 13:00 WIB</span>
                                 <span class="text-slate-400 text-[10px]">Istirahat makan siang, puncak scrolling marketplace.</span>
                             </div>
                             <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800/80">
-                                <span class="font-bold text-blue-400 block mb-0.5">🌙 Malam: 19:30 – 21:00 WIB</span>
+                                <span class="font-bold text-blue-400 block mb-0.5 flex items-center gap-1.5"><i data-lucide="moon" class="w-3.5 h-3.5"></i> Malam: 19:30 – 21:00 WIB</span>
                                 <span class="text-slate-400 text-[10px]">Prime time relaksasi, tingkat konversi belanja tertinggi.</span>
                             </div>
                         </div>
@@ -258,15 +258,15 @@
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 <button type="button" onclick="document.getElementById('modal-single-link').classList.remove('hidden')" class="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-2xl font-bold text-xs shadow-lg shadow-indigo-950 transition active:scale-98">
                     <i data-lucide="zap" class="w-4 h-4 text-amber-300"></i>
-                    <span>⚡ Input 1 Link Cepat</span>
+                    <span>Input 1 Link Cepat</span>
                 </button>
                 <button type="button" onclick="document.getElementById('modal-bulk-import').classList.remove('hidden')" class="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white rounded-2xl font-bold text-xs shadow-lg shadow-emerald-950 transition active:scale-98">
                     <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-100"></i>
-                    <span>📂 Import Massal (CSV Shopee)</span>
+                    <span>Import Massal (CSV Shopee)</span>
                 </button>
                 <button type="button" onclick="document.getElementById('modal-quick-add').classList.remove('hidden')" class="flex items-center justify-center gap-2 px-4 py-3 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 rounded-2xl font-bold text-xs transition active:scale-98">
                     <i data-lucide="plus" class="w-4 h-4"></i>
-                    <span>➕ Form Manual</span>
+                    <span>Form Manual</span>
                 </button>
             </div>
 
@@ -278,6 +278,13 @@
                     <a href="/admin?tab=products&status_filter=ALL{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3 py-1.5 rounded-xl transition text-[11px] font-bold flex-shrink-0 {% if status_filter == 'ALL' %}bg-indigo-600 text-white shadow-sm{% else %}bg-slate-950 text-slate-400 hover:text-white border border-slate-800{% endif %}">Semua</a>
                     <a href="/admin?tab=products&status_filter=APPROVED{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3 py-1.5 rounded-xl transition text-[11px] font-bold flex-shrink-0 {% if status_filter == 'APPROVED' %}bg-emerald-600 text-white shadow-sm{% else %}bg-slate-950 text-slate-400 hover:text-white border border-slate-800{% endif %}">Approved</a>
                     <a href="/admin?tab=products&status_filter=PENDING{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3 py-1.5 rounded-xl transition text-[11px] font-bold flex-shrink-0 {% if status_filter == 'PENDING' %}bg-amber-600 text-white shadow-sm{% else %}bg-slate-950 text-slate-400 hover:text-white border border-slate-800{% endif %}">Pending</a>
+                    <a href="/admin?tab=products&status_filter=REJECTED{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3 py-1.5 rounded-xl transition text-[11px] font-bold flex-shrink-0 flex items-center gap-1.5 {% if status_filter == 'REJECTED' %}bg-rose-600 text-white shadow-sm{% else %}bg-slate-950 text-slate-400 hover:text-white border border-slate-800{% endif %}">
+                        <i data-lucide="shield-alert" class="w-3 h-3 text-rose-400"></i>
+                        <span>Ditolak / Rating Rendah</span>
+                        {% if metrics.rejected > 0 %}
+                        <span class="px-1.5 py-0.2 rounded-full text-[9px] bg-rose-950 text-rose-300 border border-rose-800/80">{{ metrics.rejected }}</span>
+                        {% endif %}
+                    </a>
                     <a href="/admin?tab=products&status_filter=POSTED{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3 py-1.5 rounded-xl transition text-[11px] font-bold flex-shrink-0 {% if status_filter == 'POSTED' %}bg-blue-600 text-white shadow-sm{% else %}bg-slate-950 text-slate-400 hover:text-white border border-slate-800{% endif %}">Posted</a>
                 </div>
 
@@ -338,7 +345,7 @@
                                 {% endif %}
                                 {% if p.market_score and p.market_score > 0 %}
                                 <span class="px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-950 text-amber-400 border border-amber-800/60">
-                                    🔥 Skor: {{ p.market_score }}
+                                    <i data-lucide="trending-up" class="w-2.5 h-2.5"></i> Skor: {{ p.market_score }}
                                 </span>
                                 {% endif %}
                                 {% if p.media_type == 'VIDEO' %}
@@ -350,6 +357,14 @@
                         </div>
                     </div>
 
+                    {% if p.status == 'REJECTED' and p.rejection_reason %}
+                    <div class="p-3 rounded-2xl bg-rose-950/70 border border-rose-800/80 text-[11px] text-rose-300 flex items-start gap-2">
+                        <i data-lucide="shield-alert" class="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5"></i>
+                        <div>
+                            <strong class="font-bold text-rose-200">Ditolak:</strong> {{ p.rejection_reason }}
+                        </div>
+                    </div>
+                    {% endif %}
                     <!-- Caption Preview Box (Clickable to open full detail modal) -->
                     <div class="bg-slate-950/70 p-3 rounded-2xl border border-slate-800/60 cursor-pointer hover:border-slate-700 transition" onclick="openDetailModal('{{ p.item_id }}')">
                         <div class="flex items-center justify-between mb-1 text-[10px] text-slate-400 font-semibold">
@@ -390,6 +405,19 @@
                         </form>
                         {% endif %}
 
+{% if p.status == 'REJECTED' %}
+                        <form action="/admin/action/restore" method="POST" class="inline">
+                            <input type="hidden" name="item_id" value="{{ p.item_id }}">
+                            <button type="submit" title="Pulihkan & Setujui" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2 px-3 rounded-xl transition flex items-center gap-1 shadow-sm">
+                                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                                <span>Pulihkan</span>
+                            </button>
+                        </form>
+                        {% else %}
+                        <button type="button" onclick="openRejectModal('{{ p.item_id }}', '{{ p.product_name|escape }}')" title="Tolak Kualitas & Blacklist" class="p-2 rounded-xl bg-rose-950/50 text-rose-400 hover:bg-rose-900/60 border border-rose-900/40 transition">
+                            <i data-lucide="shield-x" class="w-3.5 h-3.5"></i>
+                        </button>
+                        {% endif %}
                         <form action="/admin/action" method="POST" class="inline" onsubmit="return confirm('Hapus produk ini?')">
                             <input type="hidden" name="item_id" value="{{ p.item_id }}">
                             <input type="hidden" name="action" value="delete">
@@ -434,12 +462,12 @@
                                                 {% endif %}
                                                 {% if p.market_score and p.market_score > 0 %}
                                                 <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-950 text-amber-400 border border-amber-800/50">
-                                                    🔥 Skor: {{ p.market_score }}
+                                                    <i data-lucide="trending-up" class="w-2.5 h-2.5"></i> Skor: {{ p.market_score }}
                                                 </span>
                                                 {% endif %}
                                                 {% if p.media_type == 'VIDEO' %}
                                                 <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-950 text-rose-400 border border-rose-800/50">
-                                                    🎥 Video
+                                                    <i data-lucide="video" class="w-2.5 h-2.5"></i> Video Seller
                                                 </span>
                                                 {% endif %}
                                             </div>
@@ -462,7 +490,7 @@
                                         {% if p.price %}Rp{{ "{:,}".format(p.price|int).replace(",", ".") }}{% else %}-{% endif %}
                                     </div>
                                     <div class="text-[10px] text-slate-400 mt-0.5">
-                                        ⭐ {{ "%.1f"|format(p.rating) }} • Terjual {{ p.sales }}
+                                        <span class="flex items-center gap-1 text-amber-400 font-semibold"><i data-lucide="star" class="w-3 h-3 fill-amber-400 text-amber-400"></i> {{ "%.1f"|format(p.rating or 4.8) }}</span><span class="text-slate-400"> • Terjual {{ p.sales or 0 }}</span>
                                     </div>
                                 </td>
                                 <td class="px-4 py-3.5 max-w-sm">
@@ -509,6 +537,18 @@
                                         </form>
                                         {% endif %}
 
+{% if p.status == 'REJECTED' %}
+                                        <form action="/admin/action/restore" method="POST" class="inline">
+                                            <input type="hidden" name="item_id" value="{{ p.item_id }}">
+                                            <button type="submit" title="Pulihkan & Setujui" class="p-2 rounded-xl bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white transition">
+                                                <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                                            </button>
+                                        </form>
+                                        {% else %}
+                                        <button type="button" onclick="openRejectModal('{{ p.item_id }}', '{{ p.product_name|escape }}')" title="Tolak Kualitas Jelek & Masukkan Daftar Hitam" class="p-2 rounded-xl bg-rose-950/40 text-rose-400 hover:bg-rose-900/60 border border-rose-900/40 transition">
+                                            <i data-lucide="shield-x" class="w-4 h-4"></i>
+                                        </button>
+                                        {% endif %}
                                         <form action="/admin/action" method="POST" class="inline" onsubmit="return confirm('Hapus produk ini?')">
                                             <input type="hidden" name="item_id" value="{{ p.item_id }}">
                                             <input type="hidden" name="action" value="delete">
@@ -856,7 +896,7 @@
                             </div>
                             <div>
                                 <span class="text-slate-500 block text-[10px]">Rating:</span>
-                                <span class="text-amber-400 font-bold">⭐ {{ "%.1f"|format(p.rating) }}</span>
+                                <span class="text-amber-400 font-bold flex items-center gap-1"><i data-lucide="star" class="w-3.5 h-3.5 fill-amber-400 text-amber-400"></i> {{ "%.1f"|format(p.rating or 4.8) }}</span>
                             </div>
                             <div>
                                 <span class="text-slate-500 block text-[10px]">Terjual:</span>
@@ -1325,5 +1365,70 @@
         });
         {% endif %}
     </script>
+
+    <!-- ===================== MODAL: TOLAK KUALITAS & BLACKLIST ===================== -->
+    <div id="modal-reject-product" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 hidden">
+        <div class="bg-slate-950 border border-slate-800 rounded-3xl p-5 sm:p-6 max-w-md w-full text-xs shadow-2xl space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i data-lucide="shield-alert" class="w-4 h-4 text-rose-400"></i> Tolak Kualitas & Blacklist
+                </h3>
+                <button type="button" onclick="closeRejectModal()" class="p-1.5 rounded-lg bg-slate-900 text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <p class="text-slate-300 text-xs leading-relaxed">
+                Produk <strong id="reject-product-title" class="text-white"></strong> akan dipindahkan ke tab <strong class="text-rose-300">Ditolak / Rating Rendah</strong> dan tidak akan diposting.
+            </p>
+            <form action="/admin/action/reject-quality" method="POST" class="space-y-3.5">
+                <input type="hidden" name="item_id" id="reject-item-id" value="">
+                <input type="hidden" name="redirect_tab" value="products">
+
+                <div>
+                    <label class="block font-semibold mb-1 text-slate-300">Alasan Penolakan:</label>
+                    <select name="reason" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-rose-500 text-xs">
+                        <option value="Rating rendah & ulasan pembeli jelek">Rating rendah & ulasan pembeli jelek</option>
+                        <option value="Kualitas material buruk / rawan rusak / mengecewakan">Kualitas material buruk / rawan rusak / mengecewakan</option>
+                        <option value="Harga anomali terlalu murah / terindikasi barang tiruan">Harga anomali terlalu murah / terindikasi barang tiruan</option>
+                        <option value="Toko tidak kredibel / risiko komplain tinggi">Toko tidak kredibel / risiko komplain tinggi</option>
+                    </select>
+                </div>
+
+                <div class="p-3 rounded-2xl bg-slate-900/80 border border-slate-800">
+                    <label class="flex items-start gap-2 cursor-pointer text-slate-200">
+                        <input type="checkbox" name="add_blacklist" value="true" checked class="mt-0.5 rounded bg-slate-950 border-slate-700 text-rose-600">
+                        <div>
+                            <span class="font-bold text-rose-300">Simpan ke Memori Daftar Hitam (Blacklist)</span>
+                            <p class="text-[10px] text-slate-400 mt-0.5">Jika di masa depan Anda memasukkan lagi link atau CSV dengan merk/tipe produk ini, sistem akan otomatis menolaknya.</p>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeRejectModal()" class="px-4 py-2.5 rounded-xl bg-slate-900 text-slate-400 hover:text-white font-semibold">
+                        Batal
+                    </button>
+                    <button type="submit" class="bg-rose-600 hover:bg-rose-500 text-white font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow-lg shadow-rose-950">
+                        <i data-lucide="shield-x" class="w-4 h-4"></i>
+                        <span>Tolak & Blokir Merk Ini</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+<script>
+        function openRejectModal(itemId, productTitle) {
+            document.getElementById('reject-item-id').value = itemId;
+            document.getElementById('reject-product-title').innerText = productTitle;
+            document.getElementById('modal-reject-product').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            if (window.lucide) lucide.createIcons();
+        }
+
+        function closeRejectModal() {
+            document.getElementById('modal-reject-product').classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+</script>
 </body>
 </html>
