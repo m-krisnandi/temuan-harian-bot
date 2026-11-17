@@ -76,6 +76,8 @@ app = FastAPI(title="Temuan Harian Hub", version="2.5.0", lifespan=lifespan)
 
 # Setup Templates & Static Assets
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
+templates.env.globals["build_comment"] = build_comment
+
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
