@@ -176,8 +176,9 @@ async def public_catalog(
         products = cur.fetchall()
 
     return templates.TemplateResponse(
-        "index.html",
-        {
+        request=request,
+        name="index.html",
+        context={
             "request": request,
             "products": products,
             "search_query": q or "",
@@ -204,7 +205,7 @@ async def admin_dashboard(
     token = request.cookies.get("admin_token") or key
     admin_secret = get_admin_secret(db)
     if token != admin_secret:
-        return templates.TemplateResponse("login.html", {"request": request, "error": msg})
+        return templates.TemplateResponse(request=request, name="login.html", context={"request": request, "error": msg})
 
     metrics = db.get_metrics()
     logs = db.list_logs(limit=25)
@@ -239,8 +240,9 @@ async def admin_dashboard(
         products = cur.fetchall()
 
     response = templates.TemplateResponse(
-        "admin.html",
-        {
+        request=request,
+        name="admin.html",
+        context={
             "request": request,
             "metrics": metrics,
             "products": products,
