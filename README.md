@@ -26,7 +26,7 @@ temuan-harian-bot/
 │
 ├── publishers/                     # Social Media Integration Layer (LSP & DIP)
 │   ├── dispatcher.py               # Multi-channel broadcaster
-│   ├── facebook.py                 # Meta Facebook Page (Graph API v25.0)
+│   ├── facebook.py                 # Meta Facebook Page (Graph API v27.0)
 │   ├── threads.py                  # Meta Threads API Publisher
 │   ├── instagram.py                # Instagram Graph API Publisher
 │   └── meta_ads.py                 # Meta Marketing API (Iklan Sandbox & Live)

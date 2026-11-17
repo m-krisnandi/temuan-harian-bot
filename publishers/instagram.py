@@ -1,4 +1,4 @@
-"""Publisher resmi Instagram menggunakan Instagram Graph API (Meta v25.0).
+"""Publisher resmi Instagram menggunakan Instagram Graph API (Meta v27.0).
 Menerapkan ISocialPublisher (Single Responsibility & Liskov Substitution).
 """
 import time
@@ -6,7 +6,7 @@ import requests
 from typing import Optional
 from core.interfaces import ISocialPublisher
 
-GRAPH_VERSION = "v25.0"
+GRAPH_VERSION = "v27.0"
 FB_GRAPH_BASE = f"https://graph.facebook.com/{GRAPH_VERSION}"
 
 

@@ -1,4 +1,4 @@
-"""Publisher Facebook Page via Graph API (Meta v25.0).
+"""Publisher Facebook Page via Graph API (Meta v27.0).
 Menerapkan ISocialPublisher (Single Responsibility & Liskov Substitution).
 """
 import os
@@ -27,7 +27,7 @@ class FacebookPagePublisher(ISocialPublisher):
 
         self.page_id = str(page_id or db_page_id or os.getenv("FB_PAGE_ID", "")).strip()
         self.access_token = str(access_token or db_token or os.getenv("FB_PAGE_ACCESS_TOKEN", "")).strip()
-        version = version or os.getenv("FB_GRAPH_VERSION", "v25.0")
+        version = version or os.getenv("FB_GRAPH_VERSION", "v27.0")
         self.base_url = f"https://graph.facebook.com/{version}"
         self.session = session or requests.Session()
 

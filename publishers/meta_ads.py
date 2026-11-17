@@ -1,12 +1,12 @@
 """Modul Meta Marketing API untuk persiapan otomatisasi iklan (Facebook & Instagram Ads).
 Menerapkan IAdsManager (Single Responsibility & Interface Segregation).
-Endpoint: https://graph.facebook.com/v25.0/act_<AD_ACCOUNT_ID>
+Endpoint: https://graph.facebook.com/v27.0/act_<AD_ACCOUNT_ID>
 """
 import requests
 from typing import Dict, Any, Optional
 from core.interfaces import IAdsManager
 
-GRAPH_VERSION = "v25.0"
+GRAPH_VERSION = "v27.0"
 FB_GRAPH_BASE = f"https://graph.facebook.com/{GRAPH_VERSION}"
 
 
