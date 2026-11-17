@@ -1,6 +1,6 @@
 """Gemini AI Caption Engine untuk Temuan Harian.
 Menghasilkan caption edukatif, faktual, bebas hoaks, dan halal berdasarkan data riil produk.
-Menggunakan Gemini API (default: gemini-3.8-flash).
+Menggunakan Gemini API (default: gemini-3.1-flash-lite / gemini-3.8-flash).
 """
 import os
 import json
@@ -9,30 +9,40 @@ import urllib.error
 from typing import Dict, Any, Optional
 
 DEFAULT_GEMINI_KEY = os.getenv("GEMINI_API_KEY", "")
-DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+DEFAULT_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
 
-SYSTEM_PROMPT = """Anda adalah kurator dan periset produk untuk 'Temuan Harian' (katalog kurasi produk fungsional, unik, dan bermanfaat).
-Tugas Anda: Menulis caption edukatif yang informatif, menarik, dan 100% berbasis fakta produk riil.
+SYSTEM_PROMPT = """Anda adalah kurator dan periset produk edukasi untuk 'Temuan Harian' (media edukasi konsumen cerdas yang mengulas indikator teknis produk harian agar masyarakat tidak salah beli).
 
-ATURAN KETAT:
-1. EDUKATIF & FAKTUAL: Jelaskan fungsi produk, teknologi bahan, masalah yang diselesaikan, dan tips pemakaian/perawatan praktis. JANGAN membuat klaim palsu, hoaks, atau hiperbola berlebihan (hindari kata 'paling murah se-Indonesia', 'ajaib', 'pasti ampuh 100%').
-2. HALAL & AMAN: Pastikan sudut pandang produk halal, etis, dan aman digunakan sesuai syariat & norma.
-3. FORMAT BERSIH TANPA EMOJI: DILARANG KERAS menggunakan emoji kekanak-kanakan atau berlebihan. Gunakan tipografi rapi, bullet points sederhana (•), dan gaya bahasa profesional, ramah, serta elegan.
-4. CALL TO ACTION ELEGAN: Beri tahu pembaca bahwa link toko resmi dapat dicek di komentar pertama (First Comment).
-5. ANONYMITY & PRIVACY: JANGAN PERNAH men-tag akun siapapun, jangan menyebut identitas profil pengelola, dan jangan gunakan hashtag nama pribadi.
+Tugas Anda: Menulis postingan edukatif mendalam yang berbobot, berbasis fakta teknis riil, memecahkan masalah nyata pembaca, lalu memberikan rekomendasi produk konkret yang memenuhi kriteria tersebut.
 
-STRUKTUR CAPTION:
-[Temuan Harian: <Kategori atau Judul Singkat>]
-<Nama Produk>
+ATURAN UTAMA:
+1. EDUKASI & RISET FIRST: Pembaca harus mendapatkan wawasan/pengetahuan teknis baru terlebih dahulu sebelum melihat rekomendasi produk. Jangan menulis seperti brosur jualan atau iklan hardselling.
+2. HOOK BERBASIS MASALAH NYATA: Awali dengan pertanyaan atau masalah umum yang sering dialami pengguna (contoh: 'Sering bingung kenapa kaus oversized baru dipakai cepat lunglai/lepek?', 'Sering bingung kenapa powerbank ditahan di bandara?').
+3. 3 INDIKATOR TEKNIS / HASIL RISET: Sajikan 3 poin bernomor yang menjelaskan sains/teknis material, standar keselamatan, atau parameter fungsional secara rinci dan valid.
+4. REKOMENDASI PRODUK KONKRET: Setelah edukasi selesai, berikan 1 segmen '💡 Rekomendasi Contoh Produk' yang menyebutkan nama produk yang diulas sebagai contoh nyata yang memenuhi ketiga indikator di atas.
+5. AJAKAN SIMPATIK (LINK DI KOMENTAR): Beri tahu pembaca bahwa link toko resmi disematkan di kolom komentar agar postingan tetap nyaman dibaca dan tidak merusak estetika edukasi.
+6. PENUTUP & HASHTAG: Berikan kalimat penutup yang hangat dan bermanfaat, diikuti 4-6 hashtag relevan (#TemuanHarian, #PanduanBelanja, dsb).
+7. ANONYMITY & PRIVACY: JANGAN PERNAH men-tag akun siapapun, jangan menyebut identitas profil pengelola, dan jangan gunakan nama akun pribadi.
 
-<1-2 paragraf pendek menjelaskan fungsi nyata, masalah yang diselesaikan, atau keunggulan teknologi bahannya>
+STRUKTUR POSTINGAN (WAJIB DIIKUTI):
+<Hook pembuka berupa pertanyaan/masalah nyata sehari-hari>? Cek 3 indikator teknis ini sebelum <melakukan aktivitas/membeli kategori produk>:
 
-• Teknologi Bahan: <ringkasan spesifikasi/material/GSM>
-• Keunggulan Siluet / Fungsi: <penjelasan siluet/manfaat nyata>
-• Tips Perawatan: <saran praktis penggunaan atau pencucian>
-• Kisaran Harga: <harga/rentang harga>
+1. <Nama Indikator Teknis 1>
+<Penjelasan sains/teknis/material/aturan standar yang mendalam dan solutif>
 
-Informasi ketersediaan dan tautan toko resmi telah kami sematkan di komentar pertama.
+2. <Nama Indikator Teknis 2>
+<Penjelasan sains/teknis/material/aturan standar yang mendalam dan solutif>
+
+3. <Nama Indikator Teknis 3>
+<Penjelasan sains/teknis/material/aturan standar yang mendalam dan solutif>
+
+💡 Rekomendasi Contoh Produk:
+Salah satu produk hasil kurasi riset kami yang memenuhi parameter di atas adalah <Nama Produk>. <1-2 kalimat ringkasan spesifikasi nyata produk>.
+
+Tautan toko resmi untuk referensi produk di atas kami cantumkan di kolom komentar ya, agar postingan tetap nyaman dibaca! 👇
+
+Semoga panduan singkat ini membantu kamu memilih perlengkapan harian yang lebih awet, bermanfaat, dan sesuai kebutuhan! ✨
+#TemuanHarian #TipsBelanja #PanduanKonsumen #RisetProduk
 """
 
 def generate_educational_caption(
@@ -57,7 +67,7 @@ def generate_educational_caption(
     rating = item.get("rating", 0)
     extra_desc = item.get("description", "")
 
-    user_query = f"""Analisis dan buat caption edukatif untuk produk berikut:
+    user_query = f"""Analisis dan buat postingan edukatif + rekomendasi untuk produk berikut:
 - Nama Produk: {name}
 - Kategori: {category}
 - Kisaran Harga: {price_str}
@@ -65,7 +75,7 @@ def generate_educational_caption(
 - Jumlah Terjual: {sales} unit (jika ada)
 - Detail Deskripsi/Fitur: {extra_desc}
 
-Buat caption dalam Bahasa Indonesia sesuai instruksi sistem."""
+Buat postingan edukasi lengkap dalam Bahasa Indonesia mengikuti blueprint sistem prompt."""
 
     payload = {
         "contents": [
@@ -76,13 +86,13 @@ Buat caption dalam Bahasa Indonesia sesuai instruksi sistem."""
         ],
         "generationConfig": {
             "temperature": 0.4,
-            "maxOutputTokens": 800
+            "maxOutputTokens": 950
         }
     }
 
     # Coba model berurutan (prioritaskan responsivitas & model terbaru)
     candidate_models = []
-    for m in [selected_model, "gemini-3.1-flash-lite", "gemini-3.8-flash", "gemini-3.5-flash"]:
+    for m in [selected_model, "gemini-3.1-flash-lite", "gemini-3.8-flash", "gemini-2.5-flash"]:
         if m and m not in candidate_models:
             candidate_models.append(m)
 
