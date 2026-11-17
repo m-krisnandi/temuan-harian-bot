@@ -97,25 +97,16 @@ def build_caption(item: dict, use_ai: bool = True, gemini_api_key: Optional[str]
 
 
 def build_comment(link_or_item: Union[str, Dict[str, Any]]) -> str:
-    """Mendukung link tunggal (Shopee) atau data item multi-platform (Shopee + TikTok)."""
+    """Format komentar referensi minimalis & bersih tanpa jargon promosi."""
     if isinstance(link_or_item, dict):
         shopee = link_or_item.get("affiliate_link", "")
         tiktok = link_or_item.get("tiktok_link", "")
 
         if shopee and tiktok:
-            links_text = (
-                "Tautan produk resmi:\n"
-                f"• Shopee: {shopee}\n"
-                f"• TikTok Shop: {tiktok}"
-            )
+            return f"Tautan referensi:\nShopee: {shopee}\nTikTok: {tiktok}"
         elif tiktok and not shopee:
-            links_text = f"Tautan produk resmi di TikTok Shop:\n{tiktok}"
-        else:
-            links_text = f"Tautan produk resmi di Shopee:\n{shopee}"
-    else:
-        links_text = f"Tautan produk resmi di Shopee:\n{link_or_item}"
-
-    return (
-        f"{links_text}\n\n"
-        "Transparansi: Kami dapat menerima komisi afiliasi dari transaksi yang berhasil tanpa biaya tambahan bagi Anda."
-    )
+            return f"Tautan referensi: {tiktok}"
+        elif shopee:
+            return f"Tautan referensi: {shopee}"
+        return ""
+    return f"Tautan referensi: {link_or_item}"
