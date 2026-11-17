@@ -68,48 +68,49 @@
         {% endif %}
 
         <!-- Quick Trigger Actions Bar (Mobile First) -->
-        <div class="bg-slate-900/70 backdrop-blur p-4 rounded-3xl border border-slate-800/80 mb-5 sm:mb-6 shadow-xl">
-            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
+        <!-- System Status & Controls Bar -->
+        <div class="bg-slate-900/60 backdrop-blur-md p-3.5 sm:p-4 rounded-3xl border border-slate-800/80 mb-5 sm:mb-6 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-950/40 flex-shrink-0">
+                    <i data-lucide="radio" class="w-4 h-4"></i>
+                </div>
                 <div>
-                    <h2 class="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
-                        <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
-                        <span>Pusat Kendali & Publikasi</span>
-                    </h2>
-                    <div class="flex flex-wrap items-center gap-1.5 mt-1.5 text-[10px] text-slate-400">
-                        <span class="font-medium">Channel Aktif:</span>
-                        <span class="px-2 py-0.5 rounded-md font-bold {% if settings.get('channel_fb_enabled', '1') == '1' %}bg-blue-950 text-blue-400 border border-blue-800/60{% else %}bg-slate-800 text-slate-500{% endif %}">FB Page</span>
-                        <span class="px-2 py-0.5 rounded-md font-bold {% if settings.get('channel_threads_enabled') == '1' %}bg-purple-950 text-purple-400 border border-purple-800/60{% else %}bg-slate-800 text-slate-500{% endif %}">Threads</span>
-                        <span class="px-2 py-0.5 rounded-md font-bold {% if settings.get('channel_ig_enabled') == '1' %}bg-rose-950 text-rose-400 border border-rose-800/60{% else %}bg-slate-800 text-slate-500{% endif %}">Instagram</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs sm:text-sm font-bold text-white">Fanpage: Temuan Harian</span>
+                        <a href="https://www.facebook.com/profile.php?id=61596793103193" target="_blank" class="text-[10px] text-blue-400 hover:text-blue-300 font-mono flex items-center gap-1 bg-blue-950/80 border border-blue-800/50 px-2 py-0.5 rounded-full">
+                            <span>ID: 61596793103193</span>
+                            <i data-lucide="external-link" class="w-2.5 h-2.5"></i>
+                        </a>
+                    </div>
+                    <div class="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400">
+                        <span class="flex items-center gap-1 text-emerald-400 font-medium">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Sistem Otomasi Aktif
+                        </span>
+                        <span>•</span>
+                        <span id="live-server-clock" class="font-mono text-slate-300">{{ server_now_wib }} WIB</span>
                     </div>
                 </div>
+            </div>
 
-                <!-- Action Buttons: Responsive Grid / Wrap -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full lg:w-auto">
-                    <!-- Trigger Publish Next -->
-                    <form action="/admin/trigger/publish-next" method="POST" class="w-full">
-                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-md shadow-blue-950">
-                            <i data-lucide="send" class="w-3.5 h-3.5"></i>
-                            <span>Posting 1 Sekarang</span>
-                        </button>
-                    </form>
-
-                    <!-- Open Quick Add Modal Button -->
-                    <button type="button" onclick="document.getElementById('modal-quick-add').classList.remove('hidden')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950">
-                        <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
-                        <span>Input Produk Manual</span>
+            <!-- Quick Action Shortcuts -->
+            <div class="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                <button type="button" onclick="document.getElementById('modal-single-link').classList.remove('hidden')" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-950/50 transition active:scale-95">
+                    <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-300"></i>
+                    <span>Input 1 Link</span>
+                </button>
+                <button type="button" onclick="document.getElementById('modal-bulk-import').classList.remove('hidden')" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-950/50 transition active:scale-95">
+                    <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+                    <span>Import Massal</span>
+                </button>
+                <form action="/admin/trigger/publish-next" method="POST" class="inline">
+                    <button type="submit" class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-950/50 transition active:scale-95" title="Posting item #1 sekarang">
+                        <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                        <span class="hidden sm:inline">Posting Sekarang</span>
+                        <span class="sm:hidden">Post Now</span>
                     </button>
-
-                    <!-- Trigger Scout -->
-                    <form action="/admin/trigger/scout" method="POST" class="w-full">
-                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-md shadow-indigo-950">
-                            <i data-lucide="search" class="w-3.5 h-3.5"></i>
-                            <span>Auto-Scout Viral</span>
-                        </button>
-                    </form>
-                </div>
+                </form>
             </div>
         </div>
-
         <!-- Horizontal Scrollable Segmented Tab Bar (Touch Optimized) -->
         <div class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-1 mb-5 sm:mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
             <a href="/admin?tab=dashboard" class="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition {% if active_tab == 'dashboard' %}bg-indigo-600 text-white shadow-lg shadow-indigo-950{% else %}bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80{% endif %}">
@@ -252,191 +253,321 @@
         {% endif %}
 
         <!-- =================== TAB 2: MANAJEMEN PRODUK (MOBILE FIRST & DETAIL CAPTION) =================== -->
+        <!-- =================== TAB 2: MANAJEMEN ANTREAN & JADWAL PRODUK (LINEAR & BUFFER STYLE) =================== -->
         {% if active_tab == 'products' %}
-        <div class="space-y-4 sm:space-y-5">
-            <!-- Action Toolbar (Single Link, Bulk Import CSV, Add Manual) -->
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                <button type="button" onclick="document.getElementById('modal-single-link').classList.remove('hidden')" class="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-2xl font-bold text-xs shadow-lg shadow-indigo-950 transition active:scale-98">
-                    <i data-lucide="zap" class="w-4 h-4 text-amber-300"></i>
-                    <span>Input 1 Link Cepat</span>
-                </button>
-                <button type="button" onclick="document.getElementById('modal-bulk-import').classList.remove('hidden')" class="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white rounded-2xl font-bold text-xs shadow-lg shadow-emerald-950 transition active:scale-98">
-                    <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-100"></i>
-                    <span>Import Massal (CSV Shopee)</span>
-                </button>
-                <button type="button" onclick="document.getElementById('modal-quick-add').classList.remove('hidden')" class="flex items-center justify-center gap-2 px-4 py-3 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 rounded-2xl font-bold text-xs transition active:scale-98">
-                    <i data-lucide="plus" class="w-4 h-4"></i>
-                    <span>Form Manual</span>
-                </button>
-            </div>
+        <div class="space-y-5">
 
-            <!-- Filter Bar (Responsive) -->
-            <div class="bg-slate-900/80 p-3.5 sm:p-4 rounded-3xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                <!-- Status Filter Pills -->
+            <!-- ===================== HERO SPOTLIGHT CARD: NEXT DROP ===================== -->
+            {% if next_post and status_filter in ['ALL', 'APPROVED'] %}
+            <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-950/90 via-slate-900/95 to-slate-950 border border-indigo-500/30 p-5 sm:p-6 shadow-2xl shadow-indigo-950/30">
+                <!-- Ambient Glow Background -->
+                <div class="absolute -right-20 -top-20 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute -left-20 -bottom-20 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+                    <!-- Left: Thumbnail & Details -->
+                    <div class="flex items-start sm:items-center gap-4 min-w-0">
+                        <div class="relative flex-shrink-0 cursor-pointer" onclick="openDetailModal('{{ next_post.item_id }}')">
+                            <img src="{{ next_post.image_url }}" alt="{{ next_post.product_name }}" class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover bg-slate-950 border-2 border-indigo-500/40 shadow-xl">
+                            <span class="absolute -top-2 -left-2 px-2 py-0.5 rounded-full bg-indigo-600 text-white font-extrabold text-[10px] shadow-md border border-indigo-400">
+                                #1 Antrean
+                            </span>
+                        </div>
+                        <div class="min-w-0 space-y-1">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-extrabold tracking-wide uppercase">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                                    Postingan Berikutnya
+                                </span>
+                                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                                    {{ next_post.category or 'Produk Pilihan' }}
+                                </span>
+                                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-950/80 text-amber-400 border border-amber-800/60 flex items-center gap-1">
+                                    <i data-lucide="trending-up" class="w-3 h-3"></i> Skor: {{ next_post.market_score or 85.0 }}
+                                </span>
+                            </div>
+                            <h3 class="text-sm sm:text-base font-extrabold text-white truncate hover:text-indigo-300 cursor-pointer transition" onclick="openDetailModal('{{ next_post.item_id }}')">
+                                {{ next_post.product_name }}
+                            </h3>
+                            <div class="flex items-center gap-3 text-xs text-slate-300">
+                                <span class="font-bold text-emerald-400 font-mono text-sm">
+                                    {% if next_post.price %}Rp{{ "{:,}".format(next_post.price|int).replace(",", ".") }}{% else %}-{% endif %}
+                                </span>
+                                <span>•</span>
+                                <span class="text-slate-400 flex items-center gap-1">
+                                    <i data-lucide="clock" class="w-3.5 h-3.5 text-indigo-400"></i>
+                                    Jadwal: <strong class="text-white">{{ next_post.scheduled_at }} WIB</strong>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Large Live Monospace Countdown & Action Buttons -->
+                    <div class="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between gap-3 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-800/80 flex-shrink-0">
+                        <div class="text-left lg:text-right">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Hitung Mundur Tayang</span>
+                            <div class="inline-flex items-center gap-1.5 bg-slate-950/90 border border-indigo-500/40 px-3.5 py-1.5 rounded-2xl shadow-inner">
+                                <i data-lucide="timer" class="w-4 h-4 text-indigo-400"></i>
+                                <span class="font-mono text-lg sm:text-xl font-extrabold text-white tracking-wider live-countdown" data-scheduled="{{ next_post.scheduled_at }}" id="hero-countdown">
+                                    Memuat...
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <button type="button" onclick="openDetailModal('{{ next_post.item_id }}')" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700/80 transition">
+                                <i data-lucide="eye" class="w-3.5 h-3.5 text-indigo-400"></i>
+                                <span>Tinjau Caption</span>
+                            </button>
+                            <form action="/admin/action" method="POST" class="inline">
+                                <input type="hidden" name="item_id" value="{{ next_post.item_id }}">
+                                <input type="hidden" name="action" value="publish_now">
+                                <button type="submit" class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-950/60 transition active:scale-95">
+                                    <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                                    <span>Posting Sekarang</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ===================== CONTROLS BAR: VIEW TOGGLE & FILTERS ===================== -->
+            <div class="bg-slate-900/80 p-3.5 sm:p-4 rounded-3xl border border-slate-800/80 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+                <!-- Status Pills -->
                 <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-                    <span class="text-slate-400 font-semibold text-[11px] mr-1 hidden sm:inline">Status:</span>
-                    <a href="/admin?tab=products&status_filter=ALL{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3 py-1.5 rounded-xl transition text-[11px] font-bold flex-shrink-0 {% if status_filter == 'ALL' %}bg-indigo-600 text-white shadow-sm{% else %}bg-slate-950 text-slate-400 hover:text-white border border-slate-800{% endif %}">Semua</a>
-                    <a href="/admin?tab=products&status_filter=APPROVED{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3 py-1.5 rounded-xl transition text-[11px] font-bold flex-shrink-0 {% if status_filter == 'APPROVED' %}bg-emerald-600 text-white shadow-sm{% else %}bg-slate-950 text-slate-400 hover:text-white border border-slate-800{% endif %}">Approved</a>
-                    <a href="/admin?tab=products&status_filter=PENDING{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3 py-1.5 rounded-xl transition text-[11px] font-bold flex-shrink-0 {% if status_filter == 'PENDING' %}bg-amber-600 text-white shadow-sm{% else %}bg-slate-950 text-slate-400 hover:text-white border border-slate-800{% endif %}">Pending</a>
-                    <a href="/admin?tab=products&status_filter=REJECTED{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3 py-1.5 rounded-xl transition text-[11px] font-bold flex-shrink-0 flex items-center gap-1.5 {% if status_filter == 'REJECTED' %}bg-rose-600 text-white shadow-sm{% else %}bg-slate-950 text-slate-400 hover:text-white border border-slate-800{% endif %}">
+                    <a href="/admin?tab=products&view_mode={{ view_mode }}&status_filter=ALL{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3.5 py-1.5 rounded-xl transition text-[11px] font-bold flex-shrink-0 {% if status_filter == 'ALL' %}bg-indigo-600 text-white shadow-sm{% else %}bg-slate-950 text-slate-400 hover:text-white border border-slate-800{% endif %}">
+                        Semua
+                    </a>
+                    <a href="/admin?tab=products&view_mode={{ view_mode }}&status_filter=APPROVED{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3.5 py-1.5 rounded-xl transition text-[11px] font-bold flex-shrink-0 flex items-center gap-1.5 {% if status_filter == 'APPROVED' %}bg-emerald-600 text-white shadow-sm{% else %}bg-slate-950 text-slate-400 hover:text-white border border-slate-800{% endif %}">
+                        <i data-lucide="check-circle" class="w-3 h-3"></i>
+                        <span>Approved (Terjadwal)</span>
+                        <span class="px-1.5 py-0.2 rounded-full text-[9px] bg-emerald-950 text-emerald-300 border border-emerald-800/80">{{ metrics.approved }}</span>
+                    </a>
+                    <a href="/admin?tab=products&view_mode={{ view_mode }}&status_filter=PENDING{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3.5 py-1.5 rounded-xl transition text-[11px] font-bold flex-shrink-0 flex items-center gap-1.5 {% if status_filter == 'PENDING' %}bg-amber-600 text-white shadow-sm{% else %}bg-slate-950 text-slate-400 hover:text-white border border-slate-800{% endif %}">
+                        <i data-lucide="clock" class="w-3 h-3"></i>
+                        <span>Pending</span>
+                    </a>
+                    <a href="/admin?tab=products&view_mode={{ view_mode }}&status_filter=REJECTED{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3.5 py-1.5 rounded-xl transition text-[11px] font-bold flex-shrink-0 flex items-center gap-1.5 {% if status_filter == 'REJECTED' %}bg-rose-600 text-white shadow-sm{% else %}bg-slate-950 text-slate-400 hover:text-white border border-slate-800{% endif %}">
                         <i data-lucide="shield-alert" class="w-3 h-3 text-rose-400"></i>
                         <span>Ditolak / Rating Rendah</span>
                         {% if metrics.rejected > 0 %}
                         <span class="px-1.5 py-0.2 rounded-full text-[9px] bg-rose-950 text-rose-300 border border-rose-800/80">{{ metrics.rejected }}</span>
                         {% endif %}
                     </a>
-                    <a href="/admin?tab=products&status_filter=POSTED{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3 py-1.5 rounded-xl transition text-[11px] font-bold flex-shrink-0 {% if status_filter == 'POSTED' %}bg-blue-600 text-white shadow-sm{% else %}bg-slate-950 text-slate-400 hover:text-white border border-slate-800{% endif %}">Posted</a>
+                    <a href="/admin?tab=products&view_mode={{ view_mode }}&status_filter=POSTED{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3.5 py-1.5 rounded-xl transition text-[11px] font-bold flex-shrink-0 flex items-center gap-1.5 {% if status_filter == 'POSTED' %}bg-blue-600 text-white shadow-sm{% else %}bg-slate-950 text-slate-400 hover:text-white border border-slate-800{% endif %}">
+                        <i data-lucide="share-2" class="w-3 h-3"></i>
+                        <span>Posted</span>
+                    </a>
                 </div>
 
-                <!-- Category Filter Dropdown -->
-                <div class="flex items-center gap-2 w-full sm:w-auto">
-                    <span class="text-slate-400 font-semibold text-[11px] hidden sm:inline">Kategori:</span>
-                    <select onchange="window.location.href='/admin?tab=products&status_filter={{ status_filter }}&category_filter=' + encodeURIComponent(this.value)" class="w-full sm:w-auto bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white outline-none text-xs focus:border-indigo-500">
+                <!-- Right Controls: Category Filter & View Mode Toggle (Timeline vs Table) -->
+                <div class="flex items-center gap-2.5 justify-between md:justify-end">
+                    <select onchange="window.location.href='/admin?tab=products&view_mode={{ view_mode }}&status_filter={{ status_filter }}&category_filter=' + encodeURIComponent(this.value)" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-white outline-none text-xs focus:border-indigo-500">
                         <option value="ALL" {% if category_filter == 'ALL' %}selected{% endif %}>Semua Kategori</option>
                         {% for cat in categories %}
                         <option value="{{ cat }}" {% if category_filter == cat %}selected{% endif %}>{{ cat }}</option>
                         {% endfor %}
                     </select>
+
+                    <!-- View Mode Toggle Buttons -->
+                    <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+                        <a href="/admin?tab=products&view_mode=timeline&status_filter={{ status_filter }}&category_filter={{ category_filter }}" title="Tampilan Alur Jadwal (Buffer Style)" class="p-1.5 rounded-lg transition flex items-center gap-1 text-[11px] font-semibold {% if view_mode == 'timeline' %}bg-indigo-600 text-white shadow-sm{% else %}text-slate-400 hover:text-white{% endif %}">
+                            <i data-lucide="calendar-range" class="w-3.5 h-3.5"></i>
+                            <span class="hidden sm:inline">Timeline</span>
+                        </a>
+                        <a href="/admin?tab=products&view_mode=table&status_filter={{ status_filter }}&category_filter={{ category_filter }}" title="Tampilan Tabel Terstruktur (Linear Style)" class="p-1.5 rounded-lg transition flex items-center gap-1 text-[11px] font-semibold {% if view_mode == 'table' %}bg-indigo-600 text-white shadow-sm{% else %}text-slate-400 hover:text-white{% endif %}">
+                            <i data-lucide="table" class="w-3.5 h-3.5"></i>
+                            <span class="hidden sm:inline">Tabel</span>
+                        </a>
+                    </div>
                 </div>
             </div>
 
             {% if not products %}
             <div class="bg-slate-900/40 rounded-3xl border border-slate-800 p-8 sm:p-12 text-center text-slate-500">
-                <i data-lucide="package-open" class="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 opacity-50"></i>
+                <i data-lucide="package-open" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>
                 <p class="text-xs sm:text-sm font-semibold">Tidak ada produk yang cocok dengan filter saat ini.</p>
-                <button type="button" onclick="document.getElementById('modal-quick-add').classList.remove('hidden')" class="mt-4 inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-bold">
-                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                    <span>Tambah Produk Baru Sekarang</span>
+                <button type="button" onclick="document.getElementById('modal-bulk-import').classList.remove('hidden')" class="mt-4 inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-bold">
+                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                    <span>Impor Produk Massal Sekarang</span>
                 </button>
             </div>
             {% endif %}
 
-            <!-- MOBILE CARD VIEW (< 768px): No cut-off strings, full readability -->
-            <div class="grid grid-cols-1 gap-3.5 md:hidden">
-                {% for p in products %}
-                <div class="bg-slate-900/80 p-4 rounded-3xl border border-slate-800 shadow-md space-y-3">
-                    <!-- Card Top: Thumbnail + Title + Status -->
-                    <div class="flex items-start gap-3">
-                        <img src="{{ p.image_url }}" alt="{{ p.product_name }}" class="w-16 h-16 rounded-2xl object-cover bg-slate-950 border border-slate-800 flex-shrink-0 cursor-pointer shadow-sm" onclick="openDetailModal('{{ p.item_id }}')">
-                        <div class="min-w-0 flex-grow">
-                            <div class="flex items-center justify-between gap-2 mb-1">
-                                <span class="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase {% if p.status == 'APPROVED' %}bg-emerald-950 text-emerald-400 border border-emerald-800/60{% elif p.status == 'POSTED' %}bg-blue-950 text-blue-400 border border-blue-800/60{% elif p.status == 'PENDING' %}bg-amber-950 text-amber-400 border border-amber-800/60{% else %}bg-slate-800 text-slate-400{% endif %}">
-                                    {{ p.status }}
-                                </span>
-                                <span class="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase {% if p.platform == 'SHOPEE' %}bg-orange-950 text-orange-400 border border-orange-800/60{% elif p.platform == 'TIKTOK' %}bg-rose-950 text-rose-400 border border-rose-800/60{% else %}bg-purple-950 text-purple-400 border border-purple-800/60{% endif %}">
-                                    {{ p.platform }}
-                                </span>
+            <!-- ===================== VIEW 1: TIMELINE QUEUE BOARD (BUFFER STYLE) ===================== -->
+            {% if view_mode == 'timeline' and products %}
+            <div class="space-y-6">
+                {% if timeline_groups and status_filter in ['ALL', 'APPROVED'] %}
+                    {% for day_label, items in timeline_groups.items() %}
+                    <div class="space-y-3">
+                        <!-- Day Group Header -->
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-slate-900 border border-slate-800 shadow-sm">
+                                <i data-lucide="calendar" class="w-3.5 h-3.5 text-indigo-400"></i>
+                                <span class="font-extrabold text-xs text-white">{{ day_label }}</span>
                             </div>
-                            <h4 class="font-bold text-white text-xs leading-snug line-clamp-2 cursor-pointer hover:text-indigo-300" onclick="openDetailModal('{{ p.item_id }}')">
-                                {{ p.product_name }}
-                            </h4>
-                            <div class="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
-                                <span>{{ p.category or 'Umum' }}</span>
-                                <span>•</span>
-                                <span class="font-bold text-emerald-400">
-                                    {% if p.price %}Rp{{ "{:,}".format(p.price|int).replace(",", ".") }}{% else %}-{% endif %}
-                                </span>
+                            <span class="text-[11px] text-slate-500 font-semibold">{{ items|length }} postingan terjadwal</span>
+                            <div class="h-px bg-slate-800/80 flex-grow"></div>
+                        </div>
+
+                        <!-- Grid Cards for the Day -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                            {% for p in items %}
+                            <div class="bg-slate-900/80 hover:bg-slate-900 p-4 rounded-3xl border border-slate-800/80 hover:border-slate-700/80 shadow-md transition space-y-3 flex flex-col justify-between group">
+                                <div class="space-y-2.5">
+                                    <!-- Header: Urutan (#1, #2...) + Time Slot + Live Monospace Countdown -->
+                                    <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-800/60">
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-6 h-6 rounded-lg bg-indigo-600/30 border border-indigo-500/50 text-indigo-300 font-mono font-extrabold text-xs flex items-center justify-center">
+                                                #{{ p.queue_order }}
+                                            </span>
+                                            <span class="inline-flex items-center gap-1 text-xs font-bold text-white bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800">
+                                                <i data-lucide="clock" class="w-3 h-3 text-amber-400"></i>
+                                                {{ p.time_slot or p.scheduled_at }} WIB
+                                            </span>
+                                        </div>
+                                        <!-- Monospace Countdown Badge -->
+                                        <div class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-xl bg-slate-950 border border-slate-800 text-[10px] font-mono text-indigo-300 font-bold">
+                                            <i data-lucide="timer" class="w-2.5 h-2.5 text-indigo-400"></i>
+                                            <span class="live-countdown" data-scheduled="{{ p.scheduled_at }}">...</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Product Info Section -->
+                                    <div class="flex items-start gap-3">
+                                        <div class="relative flex-shrink-0 cursor-pointer" onclick="openDetailModal('{{ p.item_id }}')">
+                                            <img src="{{ p.image_url }}" alt="{{ p.product_name }}" class="w-14 h-14 rounded-2xl object-cover bg-slate-950 border border-slate-800 shadow-sm group-hover:scale-105 transition">
+                                            {% if p.media_type == 'VIDEO' %}
+                                            <span class="absolute -bottom-1 -right-1 p-1 rounded-md bg-rose-600 text-white shadow-md">
+                                                <i data-lucide="video" class="w-2.5 h-2.5"></i>
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="min-w-0 flex-grow">
+                                            <h4 class="font-bold text-white text-xs leading-snug line-clamp-2 cursor-pointer hover:text-indigo-300 transition" onclick="openDetailModal('{{ p.item_id }}')">
+                                                {{ p.product_name }}
+                                            </h4>
+                                            <div class="flex items-center gap-2 mt-1 text-[11px]">
+                                                <span class="font-extrabold text-emerald-400 font-mono">
+                                                    {% if p.price %}Rp{{ "{:,}".format(p.price|int).replace(",", ".") }}{% else %}-{% endif %}
+                                                </span>
+                                                <span class="text-slate-500">•</span>
+                                                <span class="text-amber-400 font-semibold flex items-center gap-0.5 text-[10px]">
+                                                    <i data-lucide="star" class="w-2.5 h-2.5 fill-amber-400 text-amber-400"></i> {{ "%.1f"|format(p.rating or 4.8) }}
+                                                </span>
+                                                <span class="text-slate-500">•</span>
+                                                <span class="text-slate-400 text-[10px]">{{ p.category or 'Umum' }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Caption Box Preview -->
+                                    <div class="bg-slate-950/80 p-2.5 rounded-2xl border border-slate-800/60 cursor-pointer hover:border-slate-700 transition" onclick="openDetailModal('{{ p.item_id }}')">
+                                        <div class="flex items-center justify-between mb-1 text-[10px] text-slate-400 font-semibold">
+                                            <span class="flex items-center gap-1 text-indigo-400">
+                                                <i data-lucide="file-text" class="w-2.5 h-2.5"></i> Edukasi AI
+                                            </span>
+                                            <span class="text-[9px] text-slate-500">Klik untuk baca &rarr;</span>
+                                        </div>
+                                        <p class="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">
+                                            {{ p.caption or 'Belum ada caption.' }}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <!-- Card Footer Actions -->
+                                <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-800/60">
+                                    <button type="button" onclick="openDetailModal('{{ p.item_id }}')" class="flex-grow bg-slate-800/80 hover:bg-slate-700 text-white text-xs font-semibold py-1.5 px-3 rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-700/60">
+                                        <i data-lucide="eye" class="w-3.5 h-3.5 text-indigo-400"></i>
+                                        <span>Detail & Caption</span>
+                                    </button>
+
+                                    <form action="/admin/action" method="POST" class="inline">
+                                        <input type="hidden" name="item_id" value="{{ p.item_id }}">
+                                        <input type="hidden" name="action" value="publish_now">
+                                        <button type="submit" title="Posting Sekarang" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-1.5 px-3 rounded-xl transition flex items-center gap-1 shadow-sm">
+                                            <i data-lucide="send" class="w-3 h-3"></i>
+                                            <span>Post</span>
+                                        </button>
+                                    </form>
+
+                                    <button type="button" onclick="openRejectModal('{{ p.item_id }}', '{{ p.product_name|escape }}')" title="Tolak & Blacklist" class="p-1.5 rounded-xl bg-rose-950/40 text-rose-400 hover:bg-rose-900/60 border border-rose-900/40 transition">
+                                        <i data-lucide="shield-x" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </div>
                             </div>
-                            <div class="flex items-center gap-1.5 flex-wrap mt-1.5">
-                                {% if p.scheduled_at and p.status == 'APPROVED' %}
-                                <span class="px-2 py-0.5 rounded-md text-[9px] font-bold bg-indigo-950 text-indigo-300 border border-indigo-800/60 flex items-center gap-1">
-                                    <i data-lucide="calendar" class="w-2.5 h-2.5"></i> {{ p.scheduled_at }} WIB
-                                </span>
-                                {% endif %}
-                                {% if p.market_score and p.market_score > 0 %}
-                                <span class="px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-950 text-amber-400 border border-amber-800/60">
-                                    <i data-lucide="trending-up" class="w-2.5 h-2.5"></i> Skor: {{ p.market_score }}
-                                </span>
-                                {% endif %}
-                                {% if p.media_type == 'VIDEO' %}
-                                <span class="px-2 py-0.5 rounded-md text-[9px] font-bold bg-rose-950 text-rose-400 border border-rose-800/60 flex items-center gap-1">
-                                    <i data-lucide="video" class="w-2.5 h-2.5"></i> Video Seller
-                                </span>
-                                {% endif %}
-                            </div>
+                            {% endfor %}
                         </div>
                     </div>
-
-                    {% if p.status == 'REJECTED' and p.rejection_reason %}
-                    <div class="p-3 rounded-2xl bg-rose-950/70 border border-rose-800/80 text-[11px] text-rose-300 flex items-start gap-2">
-                        <i data-lucide="shield-alert" class="w-4 h-4 text-rose-400 flex-shrink-0 mt-0.5"></i>
-                        <div>
-                            <strong class="font-bold text-rose-200">Ditolak:</strong> {{ p.rejection_reason }}
+                    {% endfor %}
+                {% else %}
+                    <!-- Fallback Cards for non-scheduled or other statuses (Rejected, Pending, Posted) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                        {% for p in products %}
+                        <div class="bg-slate-900/80 p-4 rounded-3xl border border-slate-800/80 shadow-md space-y-3 flex flex-col justify-between">
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase {% if p.status == 'APPROVED' %}bg-emerald-950 text-emerald-400 border border-emerald-800/60{% elif p.status == 'POSTED' %}bg-blue-950 text-blue-400 border border-blue-800/60{% elif p.status == 'REJECTED' %}bg-rose-950 text-rose-400 border border-rose-800/60{% else %}bg-amber-950 text-amber-400 border border-amber-800/60{% endif %}">
+                                        {{ p.status }}
+                                    </span>
+                                    <span class="text-[10px] text-slate-400 font-mono">{{ p.category or 'Umum' }}</span>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <img src="{{ p.image_url }}" alt="{{ p.product_name }}" class="w-14 h-14 rounded-2xl object-cover bg-slate-950 border border-slate-800 flex-shrink-0 cursor-pointer" onclick="openDetailModal('{{ p.item_id }}')">
+                                    <div class="min-w-0">
+                                        <h4 class="font-bold text-white text-xs line-clamp-2 cursor-pointer hover:text-indigo-300" onclick="openDetailModal('{{ p.item_id }}')">{{ p.product_name }}</h4>
+                                        <div class="text-[11px] font-bold text-emerald-400 font-mono mt-1">
+                                            {% if p.price %}Rp{{ "{:,}".format(p.price|int).replace(",", ".") }}{% else %}-{% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% if p.status == 'REJECTED' and p.rejection_reason %}
+                                <div class="p-2.5 rounded-xl bg-rose-950/70 border border-rose-800/80 text-[10px] text-rose-300 flex items-start gap-1.5">
+                                    <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-rose-400 flex-shrink-0 mt-0.5"></i>
+                                    <div><strong>Ditolak:</strong> {{ p.rejection_reason }}</div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800/60">
+                                <button type="button" onclick="openDetailModal('{{ p.item_id }}')" class="flex-grow bg-slate-800 text-white text-xs font-semibold py-1.5 px-3 rounded-xl transition flex items-center justify-center gap-1.5">
+                                    <i data-lucide="eye" class="w-3.5 h-3.5 text-indigo-400"></i>
+                                    <span>Detail</span>
+                                </button>
+                                {% if p.status == 'REJECTED' %}
+                                <form action="/admin/action/restore" method="POST" class="inline">
+                                    <input type="hidden" name="item_id" value="{{ p.item_id }}">
+                                    <button type="submit" class="bg-emerald-600 text-white text-xs font-bold py-1.5 px-3 rounded-xl flex items-center gap-1">
+                                        <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                                        <span>Pulihkan</span>
+                                    </button>
+                                </form>
+                                {% endif %}
+                                <form action="/admin/action" method="POST" class="inline" onsubmit="return confirm('Hapus produk ini?')">
+                                    <input type="hidden" name="item_id" value="{{ p.item_id }}">
+                                    <input type="hidden" name="action" value="delete">
+                                    <button type="submit" class="p-1.5 rounded-xl bg-rose-950/40 text-rose-400 border border-rose-900/40">
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                </form>
+                            </div>
                         </div>
+                        {% endfor %}
                     </div>
-                    {% endif %}
-                    <!-- Caption Preview Box (Clickable to open full detail modal) -->
-                    <div class="bg-slate-950/70 p-3 rounded-2xl border border-slate-800/60 cursor-pointer hover:border-slate-700 transition" onclick="openDetailModal('{{ p.item_id }}')">
-                        <div class="flex items-center justify-between mb-1 text-[10px] text-slate-400 font-semibold">
-                            <span class="flex items-center gap-1 text-indigo-400">
-                                <i data-lucide="sparkles" class="w-3 h-3"></i> Pratinjau Caption Edukasi AI
-                            </span>
-                            <span class="text-indigo-400 font-bold">Buka Lengkap &rarr;</span>
-                        </div>
-                        <p class="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">
-                            {{ p.caption or 'Belum ada caption.' }}
-                        </p>
-                    </div>
-
-                    <!-- Mobile Action Buttons Bar -->
-                    <div class="flex items-center gap-2 pt-1 border-t border-slate-800/60">
-                        <button type="button" onclick="openDetailModal('{{ p.item_id }}')" class="flex-grow bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-700/60">
-                            <i data-lucide="eye" class="w-3.5 h-3.5 text-indigo-400"></i>
-                            <span>Detail & Caption</span>
-                        </button>
-
-                        {% if p.status == 'APPROVED' %}
-                        <form action="/admin/action" method="POST" class="inline">
-                            <input type="hidden" name="item_id" value="{{ p.item_id }}">
-                            <input type="hidden" name="action" value="publish_now">
-                            <button type="submit" title="Posting Sekarang" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-2 px-3.5 rounded-xl transition flex items-center gap-1 shadow-sm">
-                                <i data-lucide="send" class="w-3.5 h-3.5"></i>
-                                <span>Posting</span>
-                            </button>
-                        </form>
-                        {% elif p.status == 'PENDING' %}
-                        <form action="/admin/action" method="POST" class="inline">
-                            <input type="hidden" name="item_id" value="{{ p.item_id }}">
-                            <input type="hidden" name="action" value="approve">
-                            <button type="submit" title="Setujui" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2 px-3 rounded-xl transition flex items-center gap-1">
-                                <i data-lucide="check" class="w-3.5 h-3.5"></i>
-                                <span>Setujui</span>
-                            </button>
-                        </form>
-                        {% endif %}
-
-{% if p.status == 'REJECTED' %}
-                        <form action="/admin/action/restore" method="POST" class="inline">
-                            <input type="hidden" name="item_id" value="{{ p.item_id }}">
-                            <button type="submit" title="Pulihkan & Setujui" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2 px-3 rounded-xl transition flex items-center gap-1 shadow-sm">
-                                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                                <span>Pulihkan</span>
-                            </button>
-                        </form>
-                        {% else %}
-                        <button type="button" onclick="openRejectModal('{{ p.item_id }}', '{{ p.product_name|escape }}')" title="Tolak Kualitas & Blacklist" class="p-2 rounded-xl bg-rose-950/50 text-rose-400 hover:bg-rose-900/60 border border-rose-900/40 transition">
-                            <i data-lucide="shield-x" class="w-3.5 h-3.5"></i>
-                        </button>
-                        {% endif %}
-                        <form action="/admin/action" method="POST" class="inline" onsubmit="return confirm('Hapus produk ini?')">
-                            <input type="hidden" name="item_id" value="{{ p.item_id }}">
-                            <input type="hidden" name="action" value="delete">
-                            <button type="submit" title="Hapus" class="p-2 rounded-xl bg-rose-950/40 text-rose-400 hover:bg-rose-900/60 border border-rose-900/40 transition">
-                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </form>
-                    </div>
-                </div>
-                {% endfor %}
+                {% endif %}
             </div>
+            {% endif %}
 
-            <!-- DESKTOP TABLE VIEW (>= 768px) -->
-            <div class="hidden md:block bg-slate-900/70 rounded-3xl border border-slate-800 overflow-hidden shadow-lg">
+            <!-- ===================== VIEW 2: LINEAR-STYLE STRUCTURED TABLE VIEW ===================== -->
+            {% if view_mode == 'table' and products %}
+            <div class="bg-slate-900/70 rounded-3xl border border-slate-800 overflow-hidden shadow-xl">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs">
                         <thead class="bg-slate-950/80 text-slate-400 text-[11px] uppercase border-b border-slate-800">
                             <tr>
-                                <th class="px-4 py-3.5">Produk</th>
+                                <th class="px-4 py-3.5 whitespace-nowrap">Urutan & Hitung Mundur</th>
+                                <th class="px-4 py-3.5">Produk & Toko</th>
                                 <th class="px-4 py-3.5">Kategori</th>
                                 <th class="px-4 py-3.5">Harga & Rating</th>
                                 <th class="px-4 py-3.5">Pratinjau Caption</th>
@@ -447,52 +578,75 @@
                         <tbody class="divide-y divide-slate-800/60">
                             {% for p in products %}
                             <tr class="hover:bg-slate-800/40 transition">
+                                <!-- Kolom 1: Urutan Antrean + Live Countdown Monospace -->
+                                <td class="px-4 py-3.5 whitespace-nowrap">
+                                    <div class="space-y-1">
+                                        <div class="flex items-center gap-1.5">
+                                            {% if p.queue_order %}
+                                            <span class="w-6 h-6 rounded-lg bg-indigo-600/30 border border-indigo-500/50 text-indigo-300 font-mono font-extrabold text-xs flex items-center justify-center">
+                                                #{{ p.queue_order }}
+                                            </span>
+                                            {% else %}
+                                            <span class="w-6 h-6 rounded-lg bg-slate-800 text-slate-400 font-mono text-xs flex items-center justify-center">—</span>
+                                            {% endif %}
+                                            <span class="font-bold text-white text-[11px] font-mono">
+                                                {{ p.scheduled_at or 'Belum dijadwalkan' }}
+                                            </span>
+                                        </div>
+                                        {% if p.scheduled_at and p.status == 'APPROVED' %}
+                                        <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-950 border border-slate-800 text-[10px] font-mono text-indigo-300 font-bold">
+                                            <i data-lucide="timer" class="w-2.5 h-2.5 text-indigo-400"></i>
+                                            <span class="live-countdown" data-scheduled="{{ p.scheduled_at }}">Memuat...</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+
+                                <!-- Kolom 2: Produk & Toko -->
                                 <td class="px-4 py-3.5">
                                     <div class="flex items-center gap-3">
-                                        <img src="{{ p.image_url }}" alt="{{ p.product_name }}" class="w-11 h-11 rounded-xl object-cover bg-slate-950 border border-slate-800 flex-shrink-0 cursor-pointer shadow-sm" onclick="openDetailModal('{{ p.item_id }}')">
+                                        <img src="{{ p.image_url }}" alt="{{ p.product_name }}" class="w-11 h-11 rounded-xl object-cover bg-slate-950 border border-slate-800 flex-shrink-0 cursor-pointer shadow-sm hover:scale-105 transition" onclick="openDetailModal('{{ p.item_id }}')">
                                         <div class="max-w-xs">
-                                            <a href="javascript:void(0)" onclick="openDetailModal('{{ p.item_id }}')" class="font-bold text-slate-100 hover:text-indigo-400 line-clamp-1">
+                                            <a href="javascript:void(0)" onclick="openDetailModal('{{ p.item_id }}')" class="font-bold text-slate-100 hover:text-indigo-400 line-clamp-1 transition">
                                                 {{ p.product_name }}
                                             </a>
-                                            <div class="flex items-center gap-1.5 flex-wrap mt-1">
-                                                {% if p.scheduled_at and p.status == 'APPROVED' %}
-                                                <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-950 text-indigo-300 border border-indigo-800/50 flex items-center gap-1">
-                                                    <i data-lucide="calendar" class="w-2.5 h-2.5"></i> {{ p.scheduled_at }} WIB
-                                                </span>
-                                                {% endif %}
-                                                {% if p.market_score and p.market_score > 0 %}
-                                                <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-950 text-amber-400 border border-amber-800/50">
-                                                    <i data-lucide="trending-up" class="w-2.5 h-2.5"></i> Skor: {{ p.market_score }}
-                                                </span>
-                                                {% endif %}
-                                                {% if p.media_type == 'VIDEO' %}
-                                                <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-950 text-rose-400 border border-rose-800/50">
-                                                    <i data-lucide="video" class="w-2.5 h-2.5"></i> Video Seller
-                                                </span>
-                                                {% endif %}
-                                            </div>
                                             <div class="flex items-center gap-2 mt-0.5 text-[10px]">
                                                 <span class="text-slate-400 font-mono">ID: {{ p.item_id }}</span>
                                                 <span class="px-1.5 py-0.2 rounded font-bold uppercase {% if p.platform == 'SHOPEE' %}bg-orange-950 text-orange-400 border border-orange-800/60{% elif p.platform == 'TIKTOK' %}bg-rose-950 text-rose-400 border border-rose-800/60{% else %}bg-purple-950 text-purple-400 border border-purple-800/60{% endif %}">
                                                     {{ p.platform }}
                                                 </span>
+                                                {% if p.market_score and p.market_score > 0 %}
+                                                <span class="text-amber-400 font-bold flex items-center gap-0.5">
+                                                    <i data-lucide="trending-up" class="w-2.5 h-2.5"></i> {{ p.market_score }}
+                                                </span>
+                                                {% endif %}
                                             </div>
                                         </div>
                                     </div>
                                 </td>
+
+                                <!-- Kolom 3: Kategori -->
                                 <td class="px-4 py-3.5 whitespace-nowrap">
                                     <span class="text-slate-300 bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800 text-[11px]">
                                         {{ p.category or 'Umum' }}
                                     </span>
                                 </td>
+
+                                <!-- Kolom 4: Harga & Rating -->
                                 <td class="px-4 py-3.5 whitespace-nowrap">
-                                    <div class="font-bold text-slate-100">
+                                    <div class="font-bold text-slate-100 font-mono">
                                         {% if p.price %}Rp{{ "{:,}".format(p.price|int).replace(",", ".") }}{% else %}-{% endif %}
                                     </div>
-                                    <div class="text-[10px] text-slate-400 mt-0.5">
-                                        <span class="flex items-center gap-1 text-amber-400 font-semibold"><i data-lucide="star" class="w-3 h-3 fill-amber-400 text-amber-400"></i> {{ "%.1f"|format(p.rating or 4.8) }}</span><span class="text-slate-400"> • Terjual {{ p.sales or 0 }}</span>
+                                    <div class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1.5">
+                                        <span class="flex items-center gap-1 text-amber-400 font-semibold">
+                                            <i data-lucide="star" class="w-3 h-3 fill-amber-400 text-amber-400"></i> {{ "%.1f"|format(p.rating or 4.8) }}
+                                        </span>
+                                        <span>•</span>
+                                        <span>{{ p.sales or 0 }} Terjual</span>
                                     </div>
                                 </td>
+
+                                <!-- Kolom 5: Pratinjau Caption -->
                                 <td class="px-4 py-3.5 max-w-sm">
                                     <div class="bg-slate-950/60 p-2 rounded-xl border border-slate-800/60 cursor-pointer hover:border-slate-700 transition" onclick="openDetailModal('{{ p.item_id }}')">
                                         <p class="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">
@@ -500,34 +654,22 @@
                                         </p>
                                     </div>
                                 </td>
+
+                                <!-- Kolom 6: Status -->
                                 <td class="px-4 py-3.5 whitespace-nowrap text-center">
-                                    <span class="px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase {% if p.status == 'APPROVED' %}bg-emerald-950 text-emerald-400 border border-emerald-800/60{% elif p.status == 'POSTED' %}bg-blue-950 text-blue-400 border border-blue-800/60{% elif p.status == 'PENDING' %}bg-amber-950 text-amber-400 border border-amber-800/60{% else %}bg-slate-800 text-slate-400{% endif %}">
+                                    <span class="px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase {% if p.status == 'APPROVED' %}bg-emerald-950 text-emerald-400 border border-emerald-800/60{% elif p.status == 'POSTED' %}bg-blue-950 text-blue-400 border border-blue-800/60{% elif p.status == 'PENDING' %}bg-amber-950 text-amber-400 border border-amber-800/60{% else %}bg-rose-950 text-rose-400 border border-rose-800/60{% endif %}">
                                         {{ p.status }}
                                     </span>
                                 </td>
+
+                                <!-- Kolom 7: Aksi -->
                                 <td class="px-4 py-3.5 text-right whitespace-nowrap">
                                     <div class="flex items-center justify-end gap-1.5">
-                                        <!-- Detail Button -->
                                         <button type="button" onclick="openDetailModal('{{ p.item_id }}')" title="Buka Detail & Caption Lengkap" class="p-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition">
                                             <i data-lucide="eye" class="w-4 h-4"></i>
                                         </button>
 
-                                        {% if p.status == 'PENDING' %}
-                                        <form action="/admin/action" method="POST" class="inline">
-                                            <input type="hidden" name="item_id" value="{{ p.item_id }}">
-                                            <input type="hidden" name="action" value="approve">
-                                            <button type="submit" title="Setujui (Approved)" class="p-2 rounded-xl bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white transition">
-                                                <i data-lucide="check" class="w-4 h-4"></i>
-                                            </button>
-                                        </form>
-                                        <form action="/admin/action" method="POST" class="inline">
-                                            <input type="hidden" name="item_id" value="{{ p.item_id }}">
-                                            <input type="hidden" name="action" value="reject">
-                                            <button type="submit" title="Tolak" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white transition">
-                                                <i data-lucide="x" class="w-4 h-4"></i>
-                                            </button>
-                                        </form>
-                                        {% elif p.status == 'APPROVED' %}
+                                        {% if p.status == 'APPROVED' %}
                                         <form action="/admin/action" method="POST" class="inline">
                                             <input type="hidden" name="item_id" value="{{ p.item_id }}">
                                             <input type="hidden" name="action" value="publish_now">
@@ -535,9 +677,17 @@
                                                 <i data-lucide="send" class="w-4 h-4"></i>
                                             </button>
                                         </form>
+                                        {% elif p.status == 'PENDING' %}
+                                        <form action="/admin/action" method="POST" class="inline">
+                                            <input type="hidden" name="item_id" value="{{ p.item_id }}">
+                                            <input type="hidden" name="action" value="approve">
+                                            <button type="submit" title="Setujui" class="p-2 rounded-xl bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white transition">
+                                                <i data-lucide="check" class="w-4 h-4"></i>
+                                            </button>
+                                        </form>
                                         {% endif %}
 
-{% if p.status == 'REJECTED' %}
+                                        {% if p.status == 'REJECTED' %}
                                         <form action="/admin/action/restore" method="POST" class="inline">
                                             <input type="hidden" name="item_id" value="{{ p.item_id }}">
                                             <button type="submit" title="Pulihkan & Setujui" class="p-2 rounded-xl bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white transition">
@@ -545,10 +695,11 @@
                                             </button>
                                         </form>
                                         {% else %}
-                                        <button type="button" onclick="openRejectModal('{{ p.item_id }}', '{{ p.product_name|escape }}')" title="Tolak Kualitas Jelek & Masukkan Daftar Hitam" class="p-2 rounded-xl bg-rose-950/40 text-rose-400 hover:bg-rose-900/60 border border-rose-900/40 transition">
+                                        <button type="button" onclick="openRejectModal('{{ p.item_id }}', '{{ p.product_name|escape }}')" title="Tolak & Blacklist" class="p-2 rounded-xl bg-rose-950/40 text-rose-400 hover:bg-rose-900/60 border border-rose-900/40 transition">
                                             <i data-lucide="shield-x" class="w-4 h-4"></i>
                                         </button>
                                         {% endif %}
+
                                         <form action="/admin/action" method="POST" class="inline" onsubmit="return confirm('Hapus produk ini?')">
                                             <input type="hidden" name="item_id" value="{{ p.item_id }}">
                                             <input type="hidden" name="action" value="delete">
@@ -564,9 +715,10 @@
                     </table>
                 </div>
             </div>
+            {% endif %}
+
         </div>
         {% endif %}
-
         <!-- =================== TAB 3: LOG AKTIVITAS (RESPONSIVE) =================== -->
         {% if active_tab == 'logs' %}
         <div class="space-y-4">
@@ -1230,8 +1382,98 @@
     </div>
 
     <!-- Script Section -->
+    <!-- Realtime JavaScript Countdown & Polling Engine -->
     <script>
         lucide.createIcons();
+
+        // Realtime Countdown Engine (Monospace Clock Ticking every 1s)
+        function updateAllCountdowns() {
+            const now = new Date();
+            const elements = document.querySelectorAll('.live-countdown');
+
+            elements.forEach(el => {
+                const schedStr = el.getAttribute('data-scheduled');
+                if (!schedStr) {
+                    el.innerText = '—';
+                    return;
+                }
+
+                // Format: YYYY-MM-DD HH:MM (WIB is UTC+7)
+                // Normalize to ISO format: YYYY-MM-DDTHH:MM:00+07:00
+                const parts = schedStr.trim().split(' ');
+                if (parts.length < 2) {
+                    el.innerText = '—';
+                    return;
+                }
+
+                const isoTarget = parts[0] + 'T' + parts[1] + ':00+07:00';
+                const targetDate = new Date(isoTarget);
+                const diffMs = targetDate - now;
+
+                if (isNaN(diffMs)) {
+                    el.innerText = '—';
+                    return;
+                }
+
+                if (diffMs <= 0) {
+                    el.innerText = 'Siap Terbit';
+                    el.classList.add('text-emerald-400');
+                    return;
+                }
+
+                const totalSec = Math.floor(diffMs / 1000);
+                const days = Math.floor(totalSec / 86400);
+                const hours = Math.floor((totalSec % 86400) / 3600);
+                const minutes = Math.floor((totalSec % 3600) / 60);
+                const seconds = totalSec % 60;
+
+                const pad = n => String(n).padStart(2, '0');
+
+                if (days > 0) {
+                    el.innerText = `${days}h ${pad(hours)}j ${pad(minutes)}m ${pad(seconds)}s`;
+                } else {
+                    el.innerText = `${pad(hours)}j : ${pad(minutes)}m : ${pad(seconds)}s`;
+                }
+            });
+        }
+
+        // Live Server Time Clock
+        function updateServerClock() {
+            const clockEl = document.getElementById('live-server-clock');
+            if (clockEl) {
+                const now = new Date();
+                // Format in UTC+7 (WIB)
+                const options = { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+                const formatted = new Intl.DateTimeFormat('id-ID', options).format(now);
+                clockEl.innerText = formatted.replace(',', '') + ' WIB';
+            }
+        }
+
+        // Run countdown ticking immediately and interval 1000ms
+        updateAllCountdowns();
+        setInterval(updateAllCountdowns, 1000);
+        setInterval(updateServerClock, 1000);
+
+        // Background Queue Polling (Every 10 seconds without page refresh)
+        let lastNextItem = null;
+        async function pollQueueStatus() {
+            try {
+                const resp = await fetch('/api/queue-status');
+                if (!resp.ok) return;
+                const data = await resp.json();
+
+                if (data.next_item) {
+                    const hero = document.getElementById('hero-countdown');
+                    if (hero && hero.getAttribute('data-scheduled') !== data.next_item.scheduled_at) {
+                        hero.setAttribute('data-scheduled', data.next_item.scheduled_at);
+                    }
+                    lastNextItem = data.next_item.item_id;
+                }
+            } catch (e) {
+                // Ignore transient network errors
+            }
+        }
+        setInterval(pollQueueStatus, 10000);
 
         function openDetailModal(itemId) {
             const modal = document.getElementById('modal-detail-' + itemId);
@@ -1365,7 +1607,6 @@
         });
         {% endif %}
     </script>
-
     <!-- ===================== MODAL: TOLAK KUALITAS & BLACKLIST ===================== -->
     <div id="modal-reject-product" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 hidden">
         <div class="bg-slate-950 border border-slate-800 rounded-3xl p-5 sm:p-6 max-w-md w-full text-xs shadow-2xl space-y-4">

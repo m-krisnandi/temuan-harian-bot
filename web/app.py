@@ -8,6 +8,7 @@ import secrets
 import hashlib
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone, timedelta
+from collections import OrderedDict
 from contextlib import asynccontextmanager
 import asyncio
 
@@ -72,7 +73,7 @@ async def lifespan(app: FastAPI):
     scheduler_task.cancel()
 
 
-app = FastAPI(title="Temuan Harian Hub", version="2.5.0", lifespan=lifespan)
+app = FastAPI(title="Temuan Harian Hub", version="2.6.0", lifespan=lifespan)
 
 # Setup Templates & Static Assets
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
@@ -81,6 +82,50 @@ templates.env.globals["build_comment"] = build_comment
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+# ===================== REALTIME QUEUE API =====================
+
+@app.get("/api/queue-status")
+async def api_queue_status(db: ProductQueueDB = Depends(get_db)):
+    """API Realtime untuk status antrean, next drop countdown, dan metrik publikasi."""
+    now_dt = datetime.now(WIB)
+    metrics = db.get_metrics()
+    scheduled = db.list_scheduled(limit=50)
+
+    queue_list = []
+    for idx, p in enumerate(scheduled):
+        sched = p.get("scheduled_at", "")
+        rem_sec = 0
+        if sched:
+            try:
+                sched_dt = datetime.strptime(sched, "%Y-%m-%d %H:%M").replace(tzinfo=WIB)
+                rem_sec = max(0, int((sched_dt - now_dt).total_seconds()))
+            except Exception:
+                rem_sec = 0
+
+        queue_list.append({
+            "queue_order": idx + 1,
+            "item_id": p["item_id"],
+            "product_name": p["product_name"],
+            "image_url": p.get("image_url", ""),
+            "scheduled_at": sched,
+            "remaining_seconds": rem_sec,
+            "status": p.get("status", "APPROVED"),
+            "market_score": p.get("market_score", 0),
+            "price": p.get("price", 0),
+            "category": p.get("category", "")
+        })
+
+    next_item = queue_list[0] if queue_list else None
+
+    return JSONResponse({
+        "server_time_wib": now_dt.strftime("%Y-%m-%d %H:%M:%S WIB"),
+        "metrics": metrics,
+        "next_item": next_item,
+        "total_scheduled": len(queue_list),
+        "queue": queue_list
+    })
 
 
 # ===================== KATALOG PUBLIK =====================
@@ -216,9 +261,10 @@ async def admin_dashboard(
     request: Request,
     key: Optional[str] = None,
     msg: Optional[str] = None,
-    tab: str = "dashboard",
+    tab: str = "products",
     status_filter: str = "ALL",
     category_filter: str = "ALL",
+    view_mode: str = "timeline",
     db: ProductQueueDB = Depends(get_db)
 ):
     token = request.cookies.get("admin_token") or key
@@ -245,6 +291,63 @@ async def admin_dashboard(
     products = db.list_all(status=status_filter, category=category_filter, limit=100)
     scheduled_items = db.list_scheduled(limit=50)
 
+    # Menentukan Urutan Antrean (#1, #2, #3...) dan Next Up Post
+    now_dt = datetime.now(WIB)
+    today_str = now_dt.strftime("%Y-%m-%d")
+    tomorrow_str = (now_dt + timedelta(days=1)).strftime("%Y-%m-%d")
+
+    day_names = {
+        "Monday": "Senin", "Tuesday": "Selasa", "Wednesday": "Rabu",
+        "Thursday": "Kamis", "Friday": "Jumat", "Saturday": "Sabtu", "Sunday": "Minggu"
+    }
+    month_names = {
+        1: "Jan", 2: "Feb", 3: "Mar", 4: "Apr", 5: "Mei", 6: "Jun",
+        7: "Jul", 8: "Agt", 9: "Sep", 10: "Okt", 11: "Nov", 12: "Des"
+    }
+
+    # Urutan antrean dan grup timeline
+    timeline_groups = OrderedDict()
+    for idx, p in enumerate(scheduled_items):
+        p["queue_order"] = idx + 1
+        sched = p.get("scheduled_at", "")
+        if sched:
+            parts = sched.split(" ")
+            date_part = parts[0]
+            time_part = parts[1] if len(parts) > 1 else ""
+            p["time_slot"] = time_part
+            p["date_part"] = date_part
+
+            # Hitung selisih sisa detik
+            try:
+                sched_dt = datetime.strptime(sched, "%Y-%m-%d %H:%M").replace(tzinfo=WIB)
+                p["rem_seconds"] = max(0, int((sched_dt - now_dt).total_seconds()))
+            except Exception:
+                p["rem_seconds"] = 0
+
+            if date_part == today_str:
+                label = f"Hari Ini ({date_part})"
+            elif date_part == tomorrow_str:
+                label = f"Besok ({date_part})"
+            else:
+                try:
+                    dt = datetime.strptime(date_part, "%Y-%m-%d")
+                    day_id = day_names.get(dt.strftime("%A"), dt.strftime("%A"))
+                    mon_id = month_names.get(dt.month, "")
+                    label = f"{day_id}, {dt.day} {mon_id} {dt.year}"
+                except Exception:
+                    label = date_part
+
+            if label not in timeline_groups:
+                timeline_groups[label] = []
+            timeline_groups[label].append(p)
+
+    next_post = scheduled_items[0] if scheduled_items else None
+
+    # Tautkan order ke daftar produk utama
+    sched_order_map = {p["item_id"]: p.get("queue_order") for p in scheduled_items}
+    for p in products:
+        p["queue_order"] = sched_order_map.get(p["item_id"])
+
     response = templates.TemplateResponse(
         request=request,
         name="admin.html",
@@ -253,6 +356,8 @@ async def admin_dashboard(
             "metrics": metrics,
             "products": products,
             "scheduled_items": scheduled_items,
+            "timeline_groups": timeline_groups,
+            "next_post": next_post,
             "blacklist_items": blacklist_items,
             "logs": logs,
             "settings": settings,
@@ -260,6 +365,8 @@ async def admin_dashboard(
             "active_tab": tab,
             "status_filter": status_filter,
             "category_filter": category_filter,
+            "view_mode": view_mode,
+            "server_now_wib": now_dt.strftime("%Y-%m-%d %H:%M:%S"),
             "msg": msg,
         }
     )
