@@ -49,18 +49,18 @@ from services.quality_inspector import QualityInspector
 
 async def automated_scheduler_worker():
     """Background worker yang memeriksa antrean setiap 60 detik.
-    Jika ada produk APPROVED yang waktu scheduled_at-nya sudah tiba,
+    Jika ada produk APPROVED yang waktu scheduled_at-nya sudah tiba (Asia/Jakarta),
     secara otomatis dipublikasikan ke media sosial aktif.
     """
-    db_path = os.getenv("TEMUAN_DB", "temuan_harian.db")
-    print(f"[SCHEDULER] Background worker aktif memantau antrean di {db_path}...")
+    print("[SCHEDULER] Background worker aktif memantau antrean (Timezone: Asia/Jakarta)...")
     while True:
         try:
-            db = ProductQueueDB(db_path)
+            db = get_db()
             due_product = db.get_due_scheduled()
             if due_product:
                 print(f"[SCHEDULER] Menemukan produk jatuh tempo: {due_product['product_name'][:40]} (Jadwal: {due_product.get('scheduled_at')})")
-                _publish_product_to_channels(db, due_product)
+                res_msg = _publish_product_to_channels(db, due_product)
+                print(f"[SCHEDULER RESULT] {res_msg}")
         except Exception as e:
             print(f"[SCHEDULER ERROR] {e}")
         await asyncio.sleep(60)
