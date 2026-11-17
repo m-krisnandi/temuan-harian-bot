@@ -305,7 +305,7 @@ def _publish_product_to_channels(db: ProductQueueDB, item: Dict[str, Any]) -> st
         db.mark_comment_done(item["item_id"])
         return result.summary()
     else:
-        err_msg = "; ".join(result.errors)
+        err_msg = result.summary()
         db.set_error(item["item_id"], err_msg)
         return f"Gagal publikasi: {err_msg}"
 
