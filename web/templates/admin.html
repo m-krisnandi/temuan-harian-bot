@@ -6,6 +6,7 @@
     <title>Control Center — Temuan Harian</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -14,6 +15,11 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+        .sortable-ghost { opacity: 0.35; background: rgba(99, 102, 241, 0.25) !important; border: 2px dashed #6366f1 !important; transform: scale(0.98); }
+        .sortable-chosen { cursor: grabbing !important; }
+        .drag-handle { cursor: grab; }
+        .drag-handle:active { cursor: grabbing; }
+
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-600 selection:text-white">
@@ -413,14 +419,17 @@
                         </div>
 
                         <!-- Grid Cards for the Day -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 timeline-drag-container" data-day="{{ day_label }}">
                             {% for p in items %}
-                            <div class="bg-slate-900/80 hover:bg-slate-900 p-4 rounded-3xl border border-slate-800/80 hover:border-slate-700/80 shadow-md transition space-y-3 flex flex-col justify-between group">
+                            <div class="bg-slate-900/80 hover:bg-slate-900 p-4 rounded-3xl border border-slate-800/80 hover:border-slate-700/80 shadow-md transition space-y-3 flex flex-col justify-between group timeline-item" data-item-id="{{ p.item_id }}">
                                 <div class="space-y-2.5">
                                     <!-- Header: Urutan (#1, #2...) + Time Slot + Live Monospace Countdown -->
                                     <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-800/60">
                                         <div class="flex items-center gap-2">
-                                            <span class="w-6 h-6 rounded-lg bg-indigo-600/30 border border-indigo-500/50 text-indigo-300 font-mono font-extrabold text-xs flex items-center justify-center">
+                                            <div class="drag-handle p-1 rounded-md bg-slate-800/60 hover:bg-indigo-600/30 text-slate-400 hover:text-indigo-300 cursor-grab transition" title="Tahan & geser untuk menukar urutan">
+                                                <i data-lucide="grip-vertical" class="w-3.5 h-3.5"></i>
+                                            </div>
+                                            <span class="w-6 h-6 rounded-lg bg-indigo-600/30 border border-indigo-500/50 text-indigo-300 font-mono font-extrabold text-xs flex items-center justify-center queue-number-badge">
                                                 #{{ p.queue_order }}
                                             </span>
                                             <span class="inline-flex items-center gap-1 text-xs font-bold text-white bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800">
@@ -504,7 +513,7 @@
                     {% endfor %}
                 {% else %}
                     <!-- Fallback Cards for non-scheduled or other statuses (Rejected, Pending, Posted) -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 timeline-drag-container" data-day="{{ day_label }}">
                         {% for p in products %}
                         <div class="bg-slate-900/80 p-4 rounded-3xl border border-slate-800/80 shadow-md space-y-3 flex flex-col justify-between">
                             <div class="space-y-2">
@@ -575,15 +584,18 @@
                                 <th class="px-4 py-3.5 text-right">Aksi</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-800/60">
+                        <tbody class="divide-y divide-slate-800/60" id="table-drag-container">
                             {% for p in products %}
-                            <tr class="hover:bg-slate-800/40 transition">
+                            <tr class="hover:bg-slate-800/40 transition table-drag-item" data-item-id="{{ p.item_id }}">
                                 <!-- Kolom 1: Urutan Antrean + Live Countdown Monospace -->
                                 <td class="px-4 py-3.5 whitespace-nowrap">
                                     <div class="space-y-1">
-                                        <div class="flex items-center gap-1.5">
+                                        <div class="flex items-center gap-2">
+                                            <div class="drag-handle p-1 rounded-md bg-slate-800/60 hover:bg-indigo-600/30 text-slate-400 hover:text-indigo-300 cursor-grab transition" title="Tahan & geser untuk menukar posisi">
+                                                <i data-lucide="grip-vertical" class="w-3.5 h-3.5"></i>
+                                            </div>
                                             {% if p.queue_order %}
-                                            <span class="w-6 h-6 rounded-lg bg-indigo-600/30 border border-indigo-500/50 text-indigo-300 font-mono font-extrabold text-xs flex items-center justify-center">
+                                            <span class="w-6 h-6 rounded-lg bg-indigo-600/30 border border-indigo-500/50 text-indigo-300 font-mono font-extrabold text-xs flex items-center justify-center queue-number-badge">
                                                 #{{ p.queue_order }}
                                             </span>
                                             {% else %}
@@ -764,7 +776,7 @@
                             <th class="px-4 py-3.5 text-right">Status</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-800/60">
+                    <tbody class="divide-y divide-slate-800/60" id="table-drag-container">
                         {% for l in logs %}
                         <tr class="hover:bg-slate-800/30">
                             <td class="px-4 py-3 text-slate-400 whitespace-nowrap text-[11px]">{{ l.created_at[:19].replace("T", " ") }}</td>
@@ -1450,6 +1462,102 @@
         }
 
         // Run countdown ticking immediately and interval 1000ms
+        
+        // ===================== DRAG AND DROP REORDER ENGINE =====================
+        function showReorderToast(msg) {
+            const toast = document.getElementById('toast-reorder');
+            const toastMsg = document.getElementById('toast-reorder-msg');
+            if (toast && toastMsg) {
+                toastMsg.innerText = msg;
+                toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+                setTimeout(() => {
+                    toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+                }, 3500);
+            }
+        }
+
+        async function saveNewOrder(orderedIds, customMsg) {
+            try {
+                const resp = await fetch('/api/queue/reorder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ordered_ids: orderedIds })
+                });
+                const res = await resp.json();
+                if (resp.ok) {
+                    showReorderToast(customMsg || res.message || 'Urutan jadwal berhasil disimpan!');
+                    // Refresh view lightly after 1.2s to update exact datetime slots
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1200);
+                } else {
+                    alert('Gagal menukar urutan: ' + (res.message || 'Error'));
+                }
+            } catch (err) {
+                alert('Terjadi kesalahan koneksi saat menukar urutan.');
+            }
+        }
+
+        function initDragAndDrop() {
+            if (typeof Sortable === 'undefined') return;
+
+            // 1. Table Drag & Drop (Linear View)
+            const tableContainer = document.getElementById('table-drag-container');
+            if (tableContainer) {
+                new Sortable(tableContainer, {
+                    handle: '.drag-handle',
+                    animation: 250,
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    onEnd: function (evt) {
+                        if (evt.oldIndex === evt.newIndex) return;
+
+                        const rows = tableContainer.querySelectorAll('.table-drag-item');
+                        const orderedIds = Array.from(rows).map(r => r.getAttribute('data-item-id')).filter(Boolean);
+                        
+                        // Update visual badge #1, #2...
+                        rows.forEach((r, idx) => {
+                            const badge = r.querySelector('.queue-number-badge');
+                            if (badge) badge.innerText = '#' + (idx + 1);
+                        });
+
+                        saveNewOrder(orderedIds, `Urutan produk berhasil ditukar dari #${evt.oldIndex + 1} ke #${evt.newIndex + 1}!`);
+                    }
+                });
+            }
+
+            // 2. Timeline Grid Drag & Drop (Buffer View across and within days)
+            const timelineGrids = document.querySelectorAll('.timeline-drag-container');
+            if (timelineGrids.length > 0) {
+                timelineGrids.forEach(grid => {
+                    new Sortable(grid, {
+                        group: 'timeline-queue',
+                        handle: '.drag-handle',
+                        animation: 250,
+                        ghostClass: 'sortable-ghost',
+                        chosenClass: 'sortable-chosen',
+                        onEnd: function (evt) {
+                            if (evt.from === evt.to && evt.oldIndex === evt.newIndex) return;
+
+                            // Collect all timeline items across all day groups in DOM order
+                            const allCards = document.querySelectorAll('.timeline-item');
+                            const orderedIds = Array.from(allCards).map(c => c.getAttribute('data-item-id')).filter(Boolean);
+
+                            // Update visual badges #1, #2...
+                            allCards.forEach((c, idx) => {
+                                const badge = c.querySelector('.queue-number-badge');
+                                if (badge) badge.innerText = '#' + (idx + 1);
+                            });
+
+                            saveNewOrder(orderedIds, 'Jadwal postingan berhasil ditukar!');
+                        }
+                    });
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', initDragAndDrop);
+
         updateAllCountdowns();
         setInterval(updateAllCountdowns, 1000);
         setInterval(updateServerClock, 1000);
@@ -1671,5 +1779,14 @@
             document.body.style.overflow = 'auto';
         }
 </script>
+
+    <!-- Floating Toast Notification for Drag & Drop Success -->
+    <div id="toast-reorder" class="fixed bottom-6 right-6 z-50 transform translate-y-20 opacity-0 pointer-events-none transition-all duration-300 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-indigo-950/95 border border-indigo-500 text-white text-xs font-semibold shadow-2xl shadow-indigo-950/80">
+        <div class="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
+            <i data-lucide="check" class="w-3.5 h-3.5 text-white"></i>
+        </div>
+        <span id="toast-reorder-msg">Urutan jadwal berhasil ditukar!</span>
+    </div>
+
 </body>
 </html>

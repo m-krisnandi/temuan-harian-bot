@@ -128,6 +128,67 @@ async def api_queue_status(db: ProductQueueDB = Depends(get_db)):
     })
 
 
+
+class ReorderRequest(BaseModel):
+    item_id_source: Optional[str] = None
+    item_id_target: Optional[str] = None
+    ordered_ids: Optional[List[str]] = None
+
+
+@app.post("/api/queue/reorder")
+async def api_queue_reorder(
+    req: ReorderRequest,
+    db: ProductQueueDB = Depends(get_db)
+):
+    """
+    Menukar urutan jadwal (Drag and Drop):
+    - Jika ordered_ids diberikan: jadwalkan ulang seluruh antrean sesuai urutan baru.
+    - Jika item_id_source & item_id_target diberikan: swap jadwal kedua produk.
+    """
+    scheduled = db.list_scheduled(limit=100)
+    if not scheduled:
+        return JSONResponse({"status": "error", "message": "Tidak ada antrean jadwal"}, status_code=400)
+
+    # Mode 1: Reorder seluruh antrean berdasarkan ordered_ids
+    if req.ordered_ids:
+        # Ambil seluruh jadwal yang sudah ada (terurut waktu asc)
+        existing_times = [p["scheduled_at"] for p in scheduled if p.get("scheduled_at")]
+        item_map = {p["item_id"]: p for p in scheduled}
+
+        for idx, item_id in enumerate(req.ordered_ids):
+            if idx < len(existing_times) and item_id in item_map:
+                new_time = existing_times[idx]
+                db.update_schedule(item_id, new_time)
+
+        return JSONResponse({
+            "status": "success",
+            "message": f"Berhasil memperbarui {len(req.ordered_ids)} urutan postingan."
+        })
+
+    # Mode 2: Swap dua produk
+    if req.item_id_source and req.item_id_target:
+        src = db.get(req.item_id_source)
+        tgt = db.get(req.item_id_target)
+        if not src or not tgt:
+            return JSONResponse({"status": "error", "message": "Item tidak ditemukan"}, status_code=404)
+
+        src_time = src.get("scheduled_at")
+        tgt_time = tgt.get("scheduled_at")
+
+        if not src_time or not tgt_time:
+            return JSONResponse({"status": "error", "message": "Kedua produk harus memiliki jadwal aktif"}, status_code=400)
+
+        db.update_schedule(req.item_id_source, tgt_time)
+        db.update_schedule(req.item_id_target, src_time)
+
+        return JSONResponse({
+            "status": "success",
+            "message": f"Jadwal '{src['product_name'][:25]}' dan '{tgt['product_name'][:25]}' berhasil ditukar!"
+        })
+
+    return JSONResponse({"status": "error", "message": "Parameter tidak valid"}, status_code=400)
+
+
 # ===================== KATALOG PUBLIK =====================
 
 @app.get("/", response_class=HTMLResponse)
