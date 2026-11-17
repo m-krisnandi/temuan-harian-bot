@@ -105,3 +105,17 @@ def get_ads_manager(db: Optional[ProductQueueDB] = None) -> Optional[IAdsManager
         except Exception:
             return None
     return None
+
+
+def get_admin_secret(db: Optional[ProductQueueDB] = None) -> str:
+    """Mengambil password/secret admin dari DB atau environment variable."""
+    db_instance = db or get_db()
+    return db_instance.get_setting("admin_secret") or os.getenv("ADMIN_SECRET", "temuanharian2026admin")
+
+
+def verify_admin(request, db: Optional[ProductQueueDB] = None) -> bool:
+    """Verifikasi token admin dari cookie atau query string."""
+    db_instance = db or get_db()
+    admin_secret = get_admin_secret(db_instance)
+    token = request.cookies.get("admin_token") or request.query_params.get("key")
+    return token == admin_secret
