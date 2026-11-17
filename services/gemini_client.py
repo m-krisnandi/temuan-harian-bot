@@ -15,28 +15,31 @@ SYSTEM_PROMPT = """Anda adalah kurator dan periset produk untuk 'Temuan Harian' 
 Tugas Anda: Menulis caption edukatif yang informatif, menarik, dan 100% berbasis fakta produk riil.
 
 ATURAN KETAT:
-1. EDUKATIF & FAKTUAL: Jelaskan fungsi produk, masalah yang diselesaikan, dan tips pemakaian praktis. JANGAN membuat klaim palsu, hoaks, atau hiperbola berlebihan (hindari kata 'paling murah se-Indonesia', 'ajaib', 'pasti ampuh 100%').
-2. HALAL & AMAN: Pastikan sudut pandang produk halal, etis, dan aman digunakan sesuai syariat & norma. Jika produk mengandung unsur tidak halal atau terlarang, tolak atau buat ulasan netral edukatif.
+1. EDUKATIF & FAKTUAL: Jelaskan fungsi produk, teknologi bahan, masalah yang diselesaikan, dan tips pemakaian/perawatan praktis. JANGAN membuat klaim palsu, hoaks, atau hiperbola berlebihan (hindari kata 'paling murah se-Indonesia', 'ajaib', 'pasti ampuh 100%').
+2. HALAL & AMAN: Pastikan sudut pandang produk halal, etis, dan aman digunakan sesuai syariat & norma.
 3. FORMAT BERSIH TANPA EMOJI: DILARANG KERAS menggunakan emoji kekanak-kanakan atau berlebihan. Gunakan tipografi rapi, bullet points sederhana (•), dan gaya bahasa profesional, ramah, serta elegan.
 4. CALL TO ACTION ELEGAN: Beri tahu pembaca bahwa link toko resmi dapat dicek di komentar pertama (First Comment).
+5. ANONYMITY & PRIVACY: JANGAN PERNAH men-tag akun siapapun, jangan menyebut identitas profil pengelola, dan jangan gunakan hashtag nama pribadi.
 
 STRUKTUR CAPTION:
 [Temuan Harian: <Kategori atau Judul Singkat>]
+<Nama Produk>
 
-<1-2 paragraf pendek menjelaskan fungsi nyata, masalah yang diselesaikan, atau keunggulan desainnya>
+<1-2 paragraf pendek menjelaskan fungsi nyata, masalah yang diselesaikan, atau keunggulan teknologi bahannya>
 
-• Fungsi Utama: <ringkasan spesifikasi/fitur>
-• Tips Pemakaian: <saran praktis penggunaan harian>
+• Teknologi Bahan: <ringkasan spesifikasi/material/GSM>
+• Keunggulan Siluet / Fungsi: <penjelasan siluet/manfaat nyata>
+• Tips Perawatan: <saran praktis penggunaan atau pencucian>
 • Kisaran Harga: <harga/rentang harga>
 
-Informasi toko terverifikasi dan detail ketersediaan telah kami sematkan di komentar pertama.
+Informasi ketersediaan dan tautan toko resmi telah kami sematkan di komentar pertama.
 """
 
 def generate_educational_caption(
     item: Dict[str, Any],
     api_key: Optional[str] = None,
     model: Optional[str] = None,
-    timeout: int = 15
+    timeout: int = 25
 ) -> Optional[str]:
     """Menghasilkan caption edukatif via Gemini API.
     Jika gagal atau offline, mengembalikan None agar pemanggil dapat menggunakan fallback template.
@@ -52,6 +55,7 @@ def generate_educational_caption(
     name = item.get("product_name", "Produk")
     sales = item.get("sales", 0)
     rating = item.get("rating", 0)
+    extra_desc = item.get("description", "")
 
     user_query = f"""Analisis dan buat caption edukatif untuk produk berikut:
 - Nama Produk: {name}
@@ -59,6 +63,7 @@ def generate_educational_caption(
 - Kisaran Harga: {price_str}
 - Rating Ulasan: {rating} / 5.0 (jika ada)
 - Jumlah Terjual: {sales} unit (jika ada)
+- Detail Deskripsi/Fitur: {extra_desc}
 
 Buat caption dalam Bahasa Indonesia sesuai instruksi sistem."""
 
@@ -75,12 +80,11 @@ Buat caption dalam Bahasa Indonesia sesuai instruksi sistem."""
         }
     }
 
-    # Coba model utama, jika gagal coba fallback model
-    candidate_models = [selected_model]
-    if selected_model != "gemini-3.8-flash":
-        candidate_models.append("gemini-3.8-flash")
-    if "gemini-2.5-flash" not in candidate_models:
-        candidate_models.append("gemini-2.5-flash")
+    # Coba model berurutan (prioritaskan responsivitas & model terbaru)
+    candidate_models = []
+    for m in [selected_model, "gemini-3.1-flash-lite", "gemini-3.8-flash", "gemini-3.5-flash"]:
+        if m and m not in candidate_models:
+            candidate_models.append(m)
 
     for m in candidate_models:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={key}"
