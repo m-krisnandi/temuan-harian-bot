@@ -142,7 +142,7 @@ async def api_scrape_preview(request: Request, payload: Dict[str, str] = Body(..
 
 # ===================== PUBLIK (Katalog Bersih) =====================
 
-@app.get("/", response_class=HTMLResponse)
+@app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
 async def public_catalog(
     request: Request,
     q: Optional[str] = None,
@@ -192,7 +192,7 @@ async def public_catalog(
 
 # ===================== ADMIN DASHBOARD & MONITORING =====================
 
-@app.get("/admin", response_class=HTMLResponse)
+@app.api_route("/admin", methods=["GET", "HEAD"], response_class=HTMLResponse)
 async def admin_dashboard(
     request: Request,
     key: Optional[str] = None,
