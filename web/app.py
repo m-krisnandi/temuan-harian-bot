@@ -7,6 +7,7 @@ import secrets
 import sys
 import json
 import hashlib
+import asyncio
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
@@ -18,7 +19,7 @@ try:
 except ImportError:
     load_dotenv = lambda *args, **kwargs: None
 from fastapi.staticfiles import StaticFiles
-from fastapi import FastAPI, Request, Form, HTTPException, status, BackgroundTasks, Body, Depends
+from fastapi import FastAPI, Request, Form, HTTPException, status, BackgroundTasks, Body, Depends, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
 from fastapi.templating import Jinja2Templates
 
@@ -31,7 +32,9 @@ from dependencies import (
     get_ads_manager,
 )
 from captions import build_comment
-from shopee_scraper import SHOPEE_CATEGORIES
+from services.shopee_scraper import SHOPEE_CATEGORIES, ShopeePublicScraper
+from services.smart_scheduler import SmartScheduler, MarketRanker
+from services.bulk_importer import ShopeeBulkImporter
 
 load_dotenv(BASE_DIR / ".env")
 
@@ -45,6 +48,29 @@ templates.env.globals["build_comment"] = build_comment
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+# ===================== BACKGROUND AUTO-PUBLISHER WORKER =====================
+
+@app.on_event("startup")
+async def start_auto_scheduler_loop():
+    """Worker latar belakang yang memeriksa jadwal waktu emas (Prime Time) setiap menit.
+    Jika produk yang dijadwalkan sudah jatuh tempo, otomatis terbit ke Facebook Page.
+    """
+    async def worker():
+        await asyncio.sleep(10)  # Tunggu booting awal
+        while True:
+            try:
+                db = get_db()
+                due_item = db.get_due_scheduled()
+                if due_item:
+                    print(f"[AUTO-SCHEDULER] Menerbitkan produk jadwal {due_item.get('scheduled_at')}: {due_item.get('product_name')}")
+                    _publish_product_to_channels(db, due_item)
+            except Exception as e:
+                print(f"[AUTO-SCHEDULER] Worker error: {e}")
+            await asyncio.sleep(60)
+
+    asyncio.create_task(worker())
 
 
 def get_admin_secret(db: ProductQueueDB = Depends(get_db)) -> str:
@@ -162,31 +188,31 @@ async def public_catalog(
     with db._connect() as conn:
         conn.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
         cur = conn.cursor()
-        query = "SELECT * FROM products WHERE (status = 'POSTED' OR status = 'APPROVED')"
+        query = "SELECT * FROM products WHERE status = 'POSTED'"
         params = []
 
         if q:
-            query += " AND product_name LIKE ?"
-            params.append(f"%{q.strip()}%")
+            query += " AND (product_name LIKE ? OR category LIKE ?)"
+            params.extend([f"%{q}%", f"%{q}%"])
 
         if platform and platform != "ALL":
             query += " AND platform = ?"
-            params.append(platform.upper())
+            params.append(platform)
 
         if category and category != "ALL":
             query += " AND category = ?"
             params.append(category)
 
-        query += " ORDER BY created_at DESC LIMIT 60"
+        query += " ORDER BY posted_at DESC LIMIT 60"
         cur.execute(query, tuple(params))
-        products = cur.fetchall()
+        items = cur.fetchall()
 
     return templates.TemplateResponse(
         request=request,
         name="index.html",
         context={
             "request": request,
-            "products": products,
+            "items": items,
             "search_query": q or "",
             "active_platform": platform or "ALL",
             "active_category": category or "ALL",
@@ -227,23 +253,9 @@ async def admin_dashboard(
     metrics["shopee_count"] = metrics["platforms"].get("SHOPEE", 0)
     metrics["tiktok_count"] = metrics["platforms"].get("TIKTOK", 0) + metrics["platforms"].get("BOTH", 0)
 
-    with db._connect() as conn:
-        conn.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
-        cur = conn.cursor()
-        query = "SELECT * FROM products WHERE 1=1"
-        params = []
-
-        if status_filter != "ALL":
-            query += " AND status = ?"
-            params.append(status_filter)
-
-        if category_filter != "ALL":
-            query += " AND category = ?"
-            params.append(category_filter)
-
-        query += " ORDER BY created_at DESC LIMIT 100"
-        cur.execute(query, tuple(params))
-        products = cur.fetchall()
+    # Ambil produk dengan filter terintegrasi
+    products = db.list_all(status=status_filter, category=category_filter, limit=100)
+    scheduled_items = db.list_scheduled(limit=50)
 
     response = templates.TemplateResponse(
         request=request,
@@ -252,6 +264,7 @@ async def admin_dashboard(
             "request": request,
             "metrics": metrics,
             "products": products,
+            "scheduled_items": scheduled_items,
             "logs": logs,
             "settings": settings,
             "categories": SHOPEE_CATEGORIES,
@@ -290,9 +303,11 @@ def _publish_product_to_channels(db: ProductQueueDB, item: Dict[str, Any]) -> st
     dispatcher = get_publisher_dispatcher(db=db)
     comment_text = build_comment(item)
     result = dispatcher.dispatch(
-        image_url=item["image_url"],
-        caption=item["caption"],
-        comment_text=comment_text
+        image_url=item.get("image_url", ""),
+        caption=item.get("caption", ""),
+        comment_text=comment_text,
+        video_url=item.get("video_url", ""),
+        media_type=item.get("media_type", "IMAGE")
     )
 
     if result.is_success:
@@ -338,6 +353,7 @@ async def admin_product_action(
 
     return RedirectResponse(url=f"/admin?tab={redirect_tab}&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)
 
+
 @app.post("/admin/update-caption")
 async def admin_update_caption(
     request: Request,
@@ -351,6 +367,166 @@ async def admin_update_caption(
     db.update_caption(item_id, caption.strip())
     return RedirectResponse(url=f"/admin?tab={redirect_tab}&msg=Caption+berhasil+diperbarui", status_code=status.HTTP_303_SEE_OTHER)
 
+
+@app.post("/admin/reschedule")
+async def admin_reschedule(
+    request: Request,
+    item_id: str = Form(...),
+    scheduled_at: str = Form(...),
+    redirect_tab: str = Form("products"),
+    db: ProductQueueDB = Depends(get_db)
+):
+    if not verify_admin(request, db):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    db.update_schedule(item_id, scheduled_at.strip())
+    return RedirectResponse(url=f"/admin?tab={redirect_tab}&msg=Jadwal+posting+berhasil+diubah", status_code=status.HTTP_303_SEE_OTHER)
+
+
+# ===================== FITUR 1: SINGLE LINK INSTANT =====================
+
+@app.post("/admin/single-link")
+async def admin_single_link_import(
+    request: Request,
+    url: str = Form(...),
+    use_gemini: bool = Form(True),
+    auto_approve: bool = Form(True),
+    db: ProductQueueDB = Depends(get_db)
+):
+    """Input 1 link Shopee saja -> AI otomatis mencari foto/video asli seller,
+    membuat caption edukasi renyah, dan mengalokasikan jadwal waktu emas posting.
+    """
+    if not verify_admin(request, db):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    clean_url = url.strip()
+    if not clean_url:
+        return RedirectResponse(url="/admin?tab=products&msg=URL+produk+diperlukan", status_code=status.HTTP_303_SEE_OTHER)
+
+    scraper = get_product_scraper()
+    scraped = scraper.scrape_preview(clean_url)
+
+    item = {
+        "item_id": scraped["item_id"],
+        "product_name": scraped["product_name"],
+        "product_url": scraped["product_url"],
+        "affiliate_link": clean_url,
+        "image_url": scraped.get("image_url", ""),
+        "video_url": scraped.get("video_url", ""),
+        "media_type": scraped.get("media_type", "IMAGE"),
+        "price": scraped.get("price", 0),
+        "discount_rate": 0,
+        "rating": 5.0,
+        "sales": 1000,
+        "commission_rate": 10.0,
+        "commission_amount": scraped.get("price", 0) * 0.1,
+        "category": scraped.get("category", "Rumah Tangga & Dekorasi"),
+        "platform": "SHOPEE",
+        "status": "APPROVED" if auto_approve else "PENDING",
+    }
+
+    # Generate caption edukasi santai & natural
+    caption_gen = get_caption_generator(db=db, use_ai=use_gemini)
+    item["caption"] = caption_gen.generate(item)
+
+    # Jadwalkan slot waktu emas otomatis
+    scheduled = SmartScheduler.schedule_batch([item])
+    final_item = scheduled[0] if scheduled else item
+
+    db.insert_product(final_item)
+    msg = f"Produk '{final_item['product_name'][:35]}' berhasil dijadwalkan pada {final_item.get('scheduled_at')}!"
+    return RedirectResponse(url=f"/admin?tab=products&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+# ===================== FITUR 2: BULK IMPORT (CSV & MULTI-LINK) =====================
+
+def _bg_run_bulk_import(
+    csv_text: str,
+    raw_links: str,
+    auto_approve: bool,
+    use_gemini: bool,
+    db_path: str = "temuan_harian.db"
+):
+    """Proses latar belakang agar browser tidak hang saat memproses 20-100 produk sekaligus."""
+    from database import ProductQueueDB
+    from services.bulk_importer import ShopeeBulkImporter
+    db = ProductQueueDB(db_path)
+    importer = ShopeeBulkImporter()
+
+    items = []
+    if csv_text.strip():
+        items = importer.parse_csv(csv_text)
+    elif raw_links.strip():
+        for line in raw_links.splitlines():
+            l = line.strip()
+            if l.startswith("http"):
+                items.append({
+                    "item_id": "",
+                    "product_name": "",
+                    "affiliate_link": l,
+                    "product_url": l,
+                    "price": 0,
+                    "sales": 0,
+                    "commission_rate": 0,
+                    "commission_amount": 0,
+                    "category": "",
+                    "platform": "SHOPEE",
+                    "status": "APPROVED" if auto_approve else "PENDING"
+                })
+
+    if not items:
+        db.log_activity("BULK_IMPORT", "Gagal impor massal: Tidak ada data valid yang ditemukan.", status="FAILED")
+        return
+
+    db.log_activity("BULK_IMPORT", f"Memulai impor massal {len(items)} produk Shopee...", status="INFO")
+
+    api_key = db.get_setting("gemini_api_key") or os.getenv("GEMINI_API_KEY")
+    enriched = importer.process_and_enrich(items, use_gemini=use_gemini, gemini_api_key=api_key)
+
+    success_count = 0
+    for it in enriched:
+        if auto_approve:
+            it["status"] = "APPROVED"
+        if db.insert_product(it):
+            success_count += 1
+
+    db.log_activity("BULK_IMPORT", f"Selesai: {success_count}/{len(items)} produk berhasil diimpor & dijadwalkan otomatis.", status="SUCCESS")
+
+
+@app.post("/admin/bulk-import")
+async def admin_bulk_import(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    csv_file: Optional[UploadFile] = File(None),
+    links_text: Optional[str] = Form(""),
+    use_gemini: bool = Form(True),
+    auto_approve: bool = Form(True),
+    db: ProductQueueDB = Depends(get_db)
+):
+    """Menerima file CSV ekspor Shopee Affiliate atau daftar teks link sekaligus."""
+    if not verify_admin(request, db):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    csv_content = ""
+    if csv_file and csv_file.filename:
+        content_bytes = await csv_file.read()
+        csv_content = content_bytes.decode("utf-8", errors="ignore")
+
+    raw_links = links_text or ""
+    if not csv_content.strip() and not raw_links.strip():
+        return RedirectResponse(url="/admin?tab=products&msg=Mohon+unggah+file+CSV+atau+masukkan+link+produk.", status_code=status.HTTP_303_SEE_OTHER)
+
+    db_path = os.getenv("TEMUAN_DB", "temuan_harian.db")
+    background_tasks.add_task(
+        _bg_run_bulk_import,
+        csv_content,
+        raw_links,
+        auto_approve,
+        use_gemini,
+        db_path
+    )
+
+    msg = "Impor+massal+sedang+diproses+di+latar+belakang.+Foto+resmi+penjual,+caption+edukasi+AI,+dan+jadwal+waktu+emas+akan+muncul+bertahap."
+    return RedirectResponse(url=f"/admin?tab=products&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @app.post("/admin/quick-add")
@@ -518,13 +694,10 @@ async def save_settings(
     db.set_setting("post_frequency_per_day", str(post_frequency_per_day))
     db.set_setting("max_posts_per_day", str(post_frequency_per_day))
     db.set_setting("post_schedule_times", post_schedule_times.strip())
-    db.set_setting("gemini_model", gemini_model.strip() or "gemini-3.8-flash")
-    db.set_setting("min_sales", str(min_sales))
-    db.set_setting("min_rating", str(min_rating))
-    db.set_setting("auto_approve_scouted", "1" if auto_approve_scouted == "1" else "0")
-
     if gemini_api_key.strip():
         db.set_setting("gemini_api_key", gemini_api_key.strip())
+    db.set_setting("gemini_model", gemini_model.strip())
+
     if fb_page_id.strip():
         db.set_setting("fb_page_id", fb_page_id.strip())
     if fb_page_access_token.strip():
@@ -546,14 +719,15 @@ async def save_settings(
 
     if meta_ad_account_id.strip():
         db.set_setting("meta_ad_account_id", meta_ad_account_id.strip())
-
     if meta_webhook_verify_token.strip():
         db.set_setting("meta_webhook_verify_token", meta_webhook_verify_token.strip())
 
-    if auto_scout_keywords.strip():
-        db.set_setting("auto_scout_keywords", auto_scout_keywords.strip())
+    db.set_setting("min_sales", str(min_sales))
+    db.set_setting("min_rating", str(min_rating))
+    db.set_setting("auto_scout_keywords", auto_scout_keywords.strip())
     if admin_secret.strip():
         db.set_setting("admin_secret", admin_secret.strip())
+    db.set_setting("auto_approve_scouted", "1" if auto_approve_scouted == "1" else "0")
 
-    db.log_activity("SETTINGS", "Pengaturan sistem, channel multi-posting & AI Gemini diperbarui.")
-    return RedirectResponse(url="/admin?tab=settings&msg=Pengaturan+berhasil+disimpan!", status_code=status.HTTP_303_SEE_OTHER)
+    db.log_activity("SETTINGS_SAVE", "Konfigurasi sistem & kredensial Meta berhasil diperbarui.")
+    return RedirectResponse(url="/admin?tab=settings&msg=Pengaturan+berhasil+disimpan", status_code=status.HTTP_303_SEE_OTHER)

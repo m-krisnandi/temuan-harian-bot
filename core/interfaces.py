@@ -82,6 +82,18 @@ class IProductRepository(ABC):
     def count_posted_today(self) -> int:
         pass
 
+    @abstractmethod
+    def update_schedule(self, item_id: str, scheduled_at: str) -> None:
+        pass
+
+    @abstractmethod
+    def list_scheduled(self, limit: int = 50) -> List[Dict[str, Any]]:
+        pass
+
+    @abstractmethod
+    def get_due_scheduled(self) -> Optional[Dict[str, Any]]:
+        pass
+
 
 class ISettingsRepository(ABC):
     """Interface Repository Pengaturan Sistem."""

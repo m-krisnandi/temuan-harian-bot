@@ -74,6 +74,14 @@ class FacebookPagePublisher(ISocialPublisher):
             raise FacebookError(f"Respons tanpa id: {body}")
         return str(post_id)
 
+    def publish_video(self, video_url: str, caption: str) -> str:
+        """Publikasikan video resmi produk via Graph API."""
+        body = self._post(f"{self.page_id}/videos", {"file_url": video_url, "description": caption})
+        post_id = body.get("id")
+        if not post_id:
+            raise FacebookError(f"Respons video tanpa id: {body}")
+        return str(post_id)
+
     def add_comment(self, post_id: str, comment_text: str) -> str:
         """Komentar pertama berisi link afiliasi. Membutuhkan izin pages_manage_engagement."""
         body = self._post(f"{post_id}/comments", {"message": comment_text})

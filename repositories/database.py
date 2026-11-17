@@ -113,13 +113,15 @@ class ProductRepository(IProductRepository):
 
     def insert(self, item: Dict[str, Any]) -> bool:
         category = item.get("category") or "Rumah Tangga & Dekorasi"
+        init_status = item.get("status") or PENDING
         rowcount = self._conn.execute(
             """
-            INSERT OR IGNORE INTO products (
+            INSERT OR REPLACE INTO products (
                 item_id, product_name, product_url, affiliate_link, image_url,
                 price, discount_rate, rating, sales, commission_rate, caption,
-                category, status, platform, tiktok_link, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?, ?, ?)
+                category, status, platform, tiktok_link, scheduled_at,
+                media_type, video_url, market_score, commission_amount, shop_name, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 str(item["item_id"]),
@@ -134,8 +136,15 @@ class ProductRepository(IProductRepository):
                 item.get("commission_rate", 0),
                 item.get("caption", ""),
                 category,
+                init_status,
                 item.get("platform", "SHOPEE"),
                 item.get("tiktok_link", ""),
+                item.get("scheduled_at", ""),
+                item.get("media_type", "IMAGE"),
+                item.get("video_url", ""),
+                float(item.get("market_score", 0.0) or 0.0),
+                float(item.get("commission_amount", 0.0) or 0.0),
+                item.get("shop_name", ""),
                 _now(),
             ),
         )
@@ -163,6 +172,41 @@ class ProductRepository(IProductRepository):
 
     def update_caption(self, item_id: str, caption: str) -> None:
         self._conn.execute("UPDATE products SET caption = ? WHERE item_id = ?", (caption, str(item_id)))
+
+    def update_schedule(self, item_id: str, scheduled_at: str) -> None:
+        self._conn.execute(
+            "UPDATE products SET scheduled_at = ?, status = ? WHERE item_id = ?",
+            (scheduled_at, APPROVED, str(item_id))
+        )
+        if self._logger:
+            self._logger.log("SCHEDULE", f"Jadwal posting diatur: {scheduled_at} ID: {item_id}")
+
+    def list_scheduled(self, limit: int = 50) -> List[Dict[str, Any]]:
+        return self._conn.query(
+            "SELECT * FROM products WHERE status = ? AND scheduled_at != '' ORDER BY scheduled_at ASC LIMIT ?",
+            (APPROVED, limit),
+        )
+
+    def get_due_scheduled(self) -> Optional[Dict[str, Any]]:
+        now_wib = datetime.now(WIB).strftime("%Y-%m-%d %H:%M")
+        rows = self._conn.query(
+            "SELECT * FROM products WHERE status = ? AND scheduled_at != '' AND scheduled_at <= ? ORDER BY scheduled_at ASC LIMIT 1",
+            (APPROVED, now_wib),
+        )
+        return rows[0] if rows else None
+
+    def list_all(self, status: str = "ALL", category: str = "ALL", limit: int = 100) -> List[Dict[str, Any]]:
+        query = "SELECT * FROM products WHERE 1=1"
+        params = []
+        if status != "ALL":
+            query += " AND status = ?"
+            params.append(status)
+        if category != "ALL":
+            query += " AND category = ?"
+            params.append(category)
+        query += " ORDER BY CASE WHEN scheduled_at != '' AND status = 'APPROVED' THEN 0 ELSE 1 END, scheduled_at ASC, created_at DESC LIMIT ?"
+        params.append(limit)
+        return self._conn.query(query, tuple(params))
 
     def mark_posted_multi(
         self,
@@ -219,8 +263,14 @@ class ProductRepository(IProductRepository):
         )
 
     def next_approved(self) -> Optional[Dict[str, Any]]:
+        # 1. Dahulukan produk yang jadwal tayang otomatisnya (scheduled_at) sudah jatuh tempo
+        due = self.get_due_scheduled()
+        if due:
+            return due
+
+        # 2. Jika tidak ada jadwal yang jatuh tempo, ambil produk APPROVED dengan skor pasar tertinggi
         rows = self._conn.query(
-            "SELECT * FROM products WHERE status = ? ORDER BY approved_at ASC LIMIT 1",
+            "SELECT * FROM products WHERE status = ? ORDER BY market_score DESC, approved_at ASC LIMIT 1",
             (APPROVED,),
         )
         return rows[0] if rows else None
@@ -252,15 +302,10 @@ class ProductQueueDB:
         self.product_repo = ProductRepository(self._conn_factory, logger=self.logs_repo)
 
     def _connect(self) -> sqlite3.Connection:
+        """Alias helper untuk koneksi langsung."""
         return self._conn_factory.connect()
 
-    def _execute(self, sql: str, params: tuple = ()) -> int:
-        return self._conn_factory.execute(sql, params)
-
-    def _query(self, sql: str, params: tuple = ()) -> List[Dict[str, Any]]:
-        return self._conn_factory.query(sql, params)
-
-    def _init_tables(self):
+    def _init_tables(self) -> None:
         conn = self._conn_factory.connect()
         try:
             with conn:
@@ -299,6 +344,12 @@ class ProductQueueDB:
                     ("category", "TEXT DEFAULT 'Rumah Tangga & Dekorasi'"),
                     ("threads_post_id", "TEXT DEFAULT ''"),
                     ("ig_post_id", "TEXT DEFAULT ''"),
+                    ("scheduled_at", "TEXT DEFAULT ''"),
+                    ("media_type", "TEXT DEFAULT 'IMAGE'"),
+                    ("video_url", "TEXT DEFAULT ''"),
+                    ("market_score", "REAL DEFAULT 0.0"),
+                    ("commission_amount", "REAL DEFAULT 0.0"),
+                    ("shop_name", "TEXT DEFAULT ''"),
                 ]
                 for col, col_def in columns_to_add:
                     try:
@@ -356,8 +407,20 @@ class ProductQueueDB:
     def list_pending(self, limit: int = 50) -> List[Dict[str, Any]]:
         return self.product_repo.list_pending(limit)
 
+    def list_all(self, status: str = "ALL", category: str = "ALL", limit: int = 100) -> List[Dict[str, Any]]:
+        return self.product_repo.list_all(status, category, limit)
+
     def next_approved(self) -> Optional[Dict[str, Any]]:
         return self.product_repo.next_approved()
+
+    def get_due_scheduled(self) -> Optional[Dict[str, Any]]:
+        return self.product_repo.get_due_scheduled()
+
+    def list_scheduled(self, limit: int = 50) -> List[Dict[str, Any]]:
+        return self.product_repo.list_scheduled(limit)
+
+    def update_schedule(self, item_id: str, scheduled_at: str) -> None:
+        self.product_repo.update_schedule(item_id, scheduled_at)
 
     def list_comment_pending(self) -> List[Dict[str, Any]]:
         return self.product_repo.list_comment_pending()

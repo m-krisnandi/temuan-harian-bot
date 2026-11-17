@@ -254,6 +254,22 @@
         <!-- =================== TAB 2: MANAJEMEN PRODUK (MOBILE FIRST & DETAIL CAPTION) =================== -->
         {% if active_tab == 'products' %}
         <div class="space-y-4 sm:space-y-5">
+            <!-- Action Toolbar (Single Link, Bulk Import CSV, Add Manual) -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <button type="button" onclick="document.getElementById('modal-single-link').classList.remove('hidden')" class="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 text-white rounded-2xl font-bold text-xs shadow-lg shadow-indigo-950 transition active:scale-98">
+                    <i data-lucide="zap" class="w-4 h-4 text-amber-300"></i>
+                    <span>⚡ Input 1 Link Cepat</span>
+                </button>
+                <button type="button" onclick="document.getElementById('modal-bulk-import').classList.remove('hidden')" class="flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white rounded-2xl font-bold text-xs shadow-lg shadow-emerald-950 transition active:scale-98">
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-100"></i>
+                    <span>📂 Import Massal (CSV Shopee)</span>
+                </button>
+                <button type="button" onclick="document.getElementById('modal-quick-add').classList.remove('hidden')" class="flex items-center justify-center gap-2 px-4 py-3 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 rounded-2xl font-bold text-xs transition active:scale-98">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    <span>➕ Form Manual</span>
+                </button>
+            </div>
+
             <!-- Filter Bar (Responsive) -->
             <div class="bg-slate-900/80 p-3.5 sm:p-4 rounded-3xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                 <!-- Status Filter Pills -->
@@ -313,6 +329,23 @@
                                 <span class="font-bold text-emerald-400">
                                     {% if p.price %}Rp{{ "{:,}".format(p.price|int).replace(",", ".") }}{% else %}-{% endif %}
                                 </span>
+                            </div>
+                            <div class="flex items-center gap-1.5 flex-wrap mt-1.5">
+                                {% if p.scheduled_at and p.status == 'APPROVED' %}
+                                <span class="px-2 py-0.5 rounded-md text-[9px] font-bold bg-indigo-950 text-indigo-300 border border-indigo-800/60 flex items-center gap-1">
+                                    <i data-lucide="calendar" class="w-2.5 h-2.5"></i> {{ p.scheduled_at }} WIB
+                                </span>
+                                {% endif %}
+                                {% if p.market_score and p.market_score > 0 %}
+                                <span class="px-2 py-0.5 rounded-md text-[9px] font-bold bg-amber-950 text-amber-400 border border-amber-800/60">
+                                    🔥 Skor: {{ p.market_score }}
+                                </span>
+                                {% endif %}
+                                {% if p.media_type == 'VIDEO' %}
+                                <span class="px-2 py-0.5 rounded-md text-[9px] font-bold bg-rose-950 text-rose-400 border border-rose-800/60 flex items-center gap-1">
+                                    <i data-lucide="video" class="w-2.5 h-2.5"></i> Video Seller
+                                </span>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -393,6 +426,23 @@
                                             <a href="javascript:void(0)" onclick="openDetailModal('{{ p.item_id }}')" class="font-bold text-slate-100 hover:text-indigo-400 line-clamp-1">
                                                 {{ p.product_name }}
                                             </a>
+                                            <div class="flex items-center gap-1.5 flex-wrap mt-1">
+                                                {% if p.scheduled_at and p.status == 'APPROVED' %}
+                                                <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-950 text-indigo-300 border border-indigo-800/50 flex items-center gap-1">
+                                                    <i data-lucide="calendar" class="w-2.5 h-2.5"></i> {{ p.scheduled_at }} WIB
+                                                </span>
+                                                {% endif %}
+                                                {% if p.market_score and p.market_score > 0 %}
+                                                <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-950 text-amber-400 border border-amber-800/50">
+                                                    🔥 Skor: {{ p.market_score }}
+                                                </span>
+                                                {% endif %}
+                                                {% if p.media_type == 'VIDEO' %}
+                                                <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-950 text-rose-400 border border-rose-800/50">
+                                                    🎥 Video
+                                                </span>
+                                                {% endif %}
+                                            </div>
                                             <div class="flex items-center gap-2 mt-0.5 text-[10px]">
                                                 <span class="text-slate-400 font-mono">ID: {{ p.item_id }}</span>
                                                 <span class="px-1.5 py-0.2 rounded font-bold uppercase {% if p.platform == 'SHOPEE' %}bg-orange-950 text-orange-400 border border-orange-800/60{% elif p.platform == 'TIKTOK' %}bg-rose-950 text-rose-400 border border-rose-800/60{% else %}bg-purple-950 text-purple-400 border border-purple-800/60{% endif %}">
@@ -924,6 +974,124 @@
         </div>
     </div>
     {% endfor %}
+
+    <!-- ===================== MODAL 1: SINGLE LINK INSTANT ===================== -->
+    <div id="modal-single-link" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 hidden">
+        <div class="bg-slate-950 border border-slate-800 rounded-3xl p-5 sm:p-6 max-w-lg w-full text-xs shadow-2xl max-h-[92vh] overflow-y-auto space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800/80">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i> Input 1 Link Cepat (AI Auto-Pilot)
+                </h3>
+                <button type="button" onclick="document.getElementById('modal-single-link').classList.add('hidden')" class="p-1.5 rounded-lg bg-slate-900 text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            
+            <p class="text-slate-400 text-[11px] leading-relaxed">
+                Cukup masukkan 1 link produk Shopee (bisa link pendek <code class="text-indigo-400">s.shopee.co.id/...</code> atau link panjang). Sistem otomatis mengambil <strong>foto resmi asli penjual (bukan AI palsu)</strong>, membuat <strong>caption edukasi renyah</strong>, dan <strong>menjadwalkan ke jam tayang terbaik</strong>.
+            </p>
+
+            <form action="/admin/single-link" method="POST" class="space-y-4">
+                <div>
+                    <label class="block font-semibold mb-1.5 text-slate-300">Link Produk Shopee</label>
+                    <input type="url" name="url" required placeholder="https://s.shopee.co.id/... atau https://shopee.co.id/product/..." class="w-full px-3.5 py-3 bg-slate-900 border border-slate-700 rounded-2xl text-white outline-none focus:border-indigo-500 text-xs">
+                </div>
+
+                <div class="space-y-2 p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800">
+                    <label class="flex items-center gap-2 cursor-pointer text-slate-200">
+                        <input type="checkbox" name="use_gemini" value="true" checked class="rounded bg-slate-950 border-slate-700 text-indigo-600">
+                        <span class="font-bold">Buat Caption Edukatif & Renyah via AI Gemini</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer text-slate-200">
+                        <input type="checkbox" name="auto_approve" value="true" checked class="rounded bg-slate-950 border-slate-700 text-emerald-500">
+                        <span class="font-bold text-emerald-400">Otomatis Jadwalkan ke Waktu Emas (Prime Time)</span>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" onclick="document.getElementById('modal-single-link').classList.add('hidden')" class="px-4 py-2.5 rounded-xl bg-slate-900 text-slate-400 hover:text-white font-semibold">
+                        Batal
+                    </button>
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-lg shadow-indigo-950 flex items-center gap-2">
+                        <i data-lucide="sparkles" class="w-4 h-4"></i>
+                        <span>Ambil Media & Jadwalkan</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===================== MODAL 2: BULK IMPORT (CSV & MULTI-LINK) ===================== -->
+    <div id="modal-bulk-import" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 hidden">
+        <div class="bg-slate-950 border border-slate-800 rounded-3xl p-5 sm:p-6 max-w-xl w-full text-xs shadow-2xl max-h-[92vh] overflow-y-auto space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800/80">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-400"></i> Impor Massal Produk Shopee (CSV / Multi-Link)
+                </h3>
+                <button type="button" onclick="document.getElementById('modal-bulk-import').classList.add('hidden')" class="p-1.5 rounded-lg bg-slate-900 text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div class="p-3.5 rounded-2xl bg-indigo-950/30 border border-indigo-900/40 text-slate-300 text-[11px] space-y-1.5">
+                <div class="flex items-center gap-1.5 font-bold text-indigo-300">
+                    <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-indigo-400"></i>
+                    <span>Otomatisasi Penjadwalan Cerdas Mengikuti Pasar:</span>
+                </div>
+                <ul class="list-disc list-inside space-y-0.5 text-slate-400 text-[10px] pl-1">
+                    <li>Mendukung file CSV ekspor resmi dari menu <strong>Shopee Affiliate &rarr; Buat Link Massal</strong>.</li>
+                    <li>Sistem mengambil foto cover asli dari seller (bukan AI) atau video jika tersedia.</li>
+                    <li>Menghitung <strong>Skor Minat Pasar</strong> (dari jumlah terjual 10RB+ dan potensi komisi rupiah).</li>
+                    <li>Menyusun jadwal selang-seling kategori di waktu emas: <strong>07:30, 12:15, 17:00, 20:00 WIB</strong> (3-4 post per hari).</li>
+                </ul>
+            </div>
+
+            <form action="/admin/bulk-import" method="POST" enctype="multipart/form-data" class="space-y-4">
+                <!-- Opsi A: Upload CSV -->
+                <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+                    <label class="block font-bold text-white text-xs flex items-center gap-1.5">
+                        <i data-lucide="upload-cloud" class="w-4 h-4 text-emerald-400"></i>
+                        <span>Opsi 1: Upload File CSV Shopee Affiliate</span>
+                    </label>
+                    <input type="file" name="csv_file" accept=".csv" class="w-full text-slate-400 text-xs file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-600 file:text-white hover:file:bg-emerald-500 cursor-pointer">
+                    <span class="text-[10px] text-slate-500 block">Contoh: LinkProdukSekaligus...csv</span>
+                </div>
+
+                <div class="text-center text-slate-500 font-bold text-[10px]">— ATAU —</div>
+
+                <!-- Opsi B: Paste Multi-Link -->
+                <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 space-y-2">
+                    <label class="block font-bold text-white text-xs flex items-center gap-1.5">
+                        <i data-lucide="link" class="w-4 h-4 text-indigo-400"></i>
+                        <span>Opsi 2: Tempel 1 - 100 Link Sekaligus</span>
+                    </label>
+                    <textarea name="links_text" rows="4" placeholder="https://s.shopee.co.id/80EJ9vnRrN&#10;https://s.shopee.co.id/8VAZkqlXqU&#10;https://s.shopee.co.id/8Kr9YXmBBT" class="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-white text-[11px] font-mono outline-none focus:border-indigo-500"></textarea>
+                    <span class="text-[10px] text-slate-500 block">Satu baris untuk setiap link produk Shopee.</span>
+                </div>
+
+                <div class="space-y-2 p-3.5 rounded-2xl bg-slate-900/80 border border-slate-800">
+                    <label class="flex items-center gap-2 cursor-pointer text-slate-200">
+                        <input type="checkbox" name="use_gemini" value="true" checked class="rounded bg-slate-950 border-slate-700 text-indigo-600">
+                        <span class="font-bold">Buat Caption Edukasi AI untuk Setiap Produk</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer text-slate-200">
+                        <input type="checkbox" name="auto_approve" value="true" checked class="rounded bg-slate-950 border-slate-700 text-emerald-500">
+                        <span class="font-bold text-emerald-400">Langsung Jadwalkan Otomatis (APPROVED)</span>
+                    </label>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-2">
+                    <button type="button" onclick="document.getElementById('modal-bulk-import').classList.add('hidden')" class="px-4 py-2.5 rounded-xl bg-slate-900 text-slate-400 hover:text-white font-semibold">
+                        Batal
+                    </button>
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-lg shadow-emerald-950 flex items-center gap-2">
+                        <i data-lucide="layers" class="w-4 h-4"></i>
+                        <span>Mulai Impor Massal & Jadwalkan</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 
     <!-- Quick Add Product Modal with Auto-Scrape Preview & Category Selector -->
     <div id="modal-quick-add" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 hidden">
