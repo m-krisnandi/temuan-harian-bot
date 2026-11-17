@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Control Center — Temuan Harian</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -10,215 +10,238 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col antialiased">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-indigo-600 selection:text-white">
 
-    <!-- Top Navigation Bar -->
-    <header class="bg-slate-950 border-b border-slate-800 sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white">
-                    <i data-lucide="gauge" class="w-4 h-4"></i>
+    <!-- Top Navigation Bar (Mobile Optimized) -->
+    <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-3">
+            <div class="flex items-center space-x-2.5 sm:space-x-3 min-w-0">
+                <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-indigo-950 flex-shrink-0">
+                    <i data-lucide="gauge" class="w-4 h-4 sm:w-4.5 sm:h-4.5"></i>
                 </div>
-                <div>
-                    <span class="font-extrabold text-sm tracking-tight text-white">Temuan Harian</span>
-                    <span class="text-[10px] font-semibold text-indigo-400 bg-indigo-950/80 border border-indigo-800/60 px-2 py-0.5 rounded-md ml-2">Multi-Channel Hub</span>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-1.5 sm:gap-2">
+                        <span class="font-extrabold text-sm sm:text-base tracking-tight text-white truncate">Temuan Harian</span>
+                        <span class="text-[9px] sm:text-[10px] font-bold text-indigo-400 bg-indigo-950/80 border border-indigo-800/50 px-2 py-0.5 rounded-full flex-shrink-0">Hub</span>
+                    </div>
+                    <p class="text-[10px] text-slate-400 hidden sm:block truncate">Multi-Affiliate & Multi-Channel Social Hub</p>
                 </div>
             </div>
 
             <!-- Header Quick Stats & Controls -->
-            <div class="flex items-center space-x-3 text-xs">
-                <div class="hidden sm:flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-800 text-slate-300">
+            <div class="flex items-center space-x-1.5 sm:space-x-3 text-xs">
+                <div class="hidden md:flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-slate-300">
                     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                     <span>Posting Hari Ini: <strong class="text-white">{{ metrics.posted_today }}/{{ settings.get('post_frequency_per_day', '3') }}</strong></span>
                 </div>
-                <a href="/" target="_blank" class="text-slate-400 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-slate-800 transition">
-                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                    <span class="hidden sm:inline">Web Publik</span>
+                <a href="/" target="_blank" class="text-slate-300 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 transition text-[11px] sm:text-xs">
+                    <i data-lucide="external-link" class="w-3.5 h-3.5 text-indigo-400"></i>
+                    <span class="hidden sm:inline">Katalog Publik</span>
                 </a>
-                <a href="/admin/logout" class="text-slate-400 hover:text-rose-400 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-slate-800 transition">
+                <a href="/admin/logout" class="text-rose-400 hover:text-rose-300 flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-rose-950/30 hover:bg-rose-950/60 border border-rose-900/40 transition text-[11px] sm:text-xs">
                     <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
-                    <span>Keluar</span>
+                    <span class="hidden sm:inline">Keluar</span>
                 </a>
             </div>
         </div>
     </header>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-grow w-full">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 flex-grow w-full">
 
         <!-- Notification Banner -->
         {% if msg %}
-        <div class="mb-6 p-4 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-200 text-xs font-medium flex items-center justify-between shadow-sm">
-            <div class="flex items-center gap-2.5">
+        <div class="mb-4 sm:mb-6 p-3.5 sm:p-4 rounded-2xl bg-indigo-950/70 border border-indigo-800/60 text-slate-100 text-xs font-medium flex items-center justify-between shadow-lg shadow-indigo-950/40">
+            <div class="flex items-center gap-2.5 min-w-0">
                 <i data-lucide="info" class="w-4 h-4 text-indigo-400 flex-shrink-0"></i>
-                <span>{{ msg }}</span>
+                <span class="truncate">{{ msg }}</span>
             </div>
-            <a href="/admin?tab={{ active_tab }}" class="text-slate-400 hover:text-white">
+            <a href="/admin?tab={{ active_tab }}" class="text-slate-400 hover:text-white flex-shrink-0 p-1">
                 <i data-lucide="x" class="w-4 h-4"></i>
             </a>
         </div>
         {% endif %}
 
-        <!-- Quick Trigger Actions Bar -->
-        <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 mb-6 flex flex-wrap items-center justify-between gap-4">
-            <div>
-                <h2 class="text-sm font-bold text-white flex items-center gap-2">
-                    <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i> Kontrol & Posting Multi-Channel
-                </h2>
-                <div class="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
-                    <span>Channel Aktif:</span>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold {% if settings.get('channel_fb_enabled', '1') == '1' %}bg-blue-950 text-blue-400 border border-blue-800/60{% else %}bg-slate-900 text-slate-500{% endif %}">FB Page</span>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold {% if settings.get('channel_threads_enabled') == '1' %}bg-purple-950 text-purple-400 border border-purple-800/60{% else %}bg-slate-900 text-slate-500{% endif %}">Threads</span>
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold {% if settings.get('channel_ig_enabled') == '1' %}bg-rose-950 text-rose-400 border border-rose-800/60{% else %}bg-slate-900 text-slate-500{% endif %}">Instagram</span>
+        <!-- Quick Trigger Actions Bar (Mobile First) -->
+        <div class="bg-slate-900/70 backdrop-blur p-4 rounded-3xl border border-slate-800/80 mb-5 sm:mb-6 shadow-xl">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
+                <div>
+                    <h2 class="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                        <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i>
+                        <span>Pusat Kendali & Publikasi</span>
+                    </h2>
+                    <div class="flex flex-wrap items-center gap-1.5 mt-1.5 text-[10px] text-slate-400">
+                        <span class="font-medium">Channel Aktif:</span>
+                        <span class="px-2 py-0.5 rounded-md font-bold {% if settings.get('channel_fb_enabled', '1') == '1' %}bg-blue-950 text-blue-400 border border-blue-800/60{% else %}bg-slate-800 text-slate-500{% endif %}">FB Page</span>
+                        <span class="px-2 py-0.5 rounded-md font-bold {% if settings.get('channel_threads_enabled') == '1' %}bg-purple-950 text-purple-400 border border-purple-800/60{% else %}bg-slate-800 text-slate-500{% endif %}">Threads</span>
+                        <span class="px-2 py-0.5 rounded-md font-bold {% if settings.get('channel_ig_enabled') == '1' %}bg-rose-950 text-rose-400 border border-rose-800/60{% else %}bg-slate-800 text-slate-500{% endif %}">Instagram</span>
+                    </div>
                 </div>
-            </div>
-            <div class="flex flex-wrap items-center gap-2.5">
-                <!-- Trigger Scout -->
-                <form action="/admin/trigger/scout" method="POST" class="inline">
-                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-sm">
-                        <i data-lucide="search" class="w-3.5 h-3.5"></i>
-                        <span>Auto-Scout Produk</span>
+
+                <!-- Action Buttons: Responsive Grid / Wrap -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full lg:w-auto">
+                    <!-- Trigger Publish Next -->
+                    <form action="/admin/trigger/publish-next" method="POST" class="w-full">
+                        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-md shadow-blue-950">
+                            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                            <span>Posting 1 Sekarang</span>
+                        </button>
+                    </form>
+
+                    <!-- Open Quick Add Modal Button -->
+                    <button type="button" onclick="document.getElementById('modal-quick-add').classList.remove('hidden')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-md shadow-emerald-950">
+                        <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                        <span>Input Produk Manual</span>
                     </button>
-                </form>
-                <!-- Trigger Publish Next -->
-                <form action="/admin/trigger/publish-next" method="POST" class="inline">
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-sm">
-                        <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
-                        <span>Posting 1 Produk Sekarang</span>
-                    </button>
-                </form>
-                <!-- Open Quick Add Modal Button -->
-                <button onclick="document.getElementById('modal-quick-add').classList.remove('hidden')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-sm">
-                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                    <span>Input Produk Manual</span>
-                </button>
+
+                    <!-- Trigger Scout -->
+                    <form action="/admin/trigger/scout" method="POST" class="w-full">
+                        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-md shadow-indigo-950">
+                            <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                            <span>Auto-Scout Viral</span>
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
 
-        <!-- Navigation Tabs -->
-        <div class="flex items-center space-x-1 border-b border-slate-800 mb-6 overflow-x-auto pb-px">
-            <a href="/admin?tab=dashboard" class="flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition {% if active_tab == 'dashboard' %}bg-slate-800 text-white border-b-2 border-indigo-500{% else %}text-slate-400 hover:text-slate-200 hover:bg-slate-800/50{% endif %}">
+        <!-- Horizontal Scrollable Segmented Tab Bar (Touch Optimized) -->
+        <div class="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-1 mb-5 sm:mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <a href="/admin?tab=dashboard" class="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition {% if active_tab == 'dashboard' %}bg-indigo-600 text-white shadow-lg shadow-indigo-950{% else %}bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80{% endif %}">
                 <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
-                <span>Ringkasan & Metrik</span>
+                <span>Metrik & Ringkasan</span>
             </a>
-            <a href="/admin?tab=products" class="flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition {% if active_tab == 'products' %}bg-slate-800 text-white border-b-2 border-indigo-500{% else %}text-slate-400 hover:text-slate-200 hover:bg-slate-800/50{% endif %}">
-                <i data-lucide="layers" class="w-4 h-4"></i>
-                <span>Manajemen Produk ({{ metrics.total }})</span>
+            <a href="/admin?tab=products" class="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition {% if active_tab == 'products' %}bg-indigo-600 text-white shadow-lg shadow-indigo-950{% else %}bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80{% endif %}">
+                <i data-lucide="package" class="w-4 h-4"></i>
+                <span>Antrean Produk</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded-full {% if active_tab == 'products' %}bg-white/20 text-white{% else %}bg-slate-800 text-slate-300{% endif %}">
+                    {{ products|length }}
+                </span>
             </a>
-            <a href="/admin?tab=logs" class="flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition {% if active_tab == 'logs' %}bg-slate-800 text-white border-b-2 border-indigo-500{% else %}text-slate-400 hover:text-slate-200 hover:bg-slate-800/50{% endif %}">
-                <i data-lucide="activity" class="w-4 h-4"></i>
+            <a href="/admin?tab=logs" class="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition {% if active_tab == 'logs' %}bg-indigo-600 text-white shadow-lg shadow-indigo-950{% else %}bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80{% endif %}">
+                <i data-lucide="history" class="w-4 h-4"></i>
                 <span>Log Aktivitas</span>
             </a>
-            <a href="/admin?tab=settings" class="flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition {% if active_tab == 'settings' %}bg-slate-800 text-white border-b-2 border-indigo-500{% else %}text-slate-400 hover:text-slate-200 hover:bg-slate-800/50{% endif %}">
+            <a href="/admin?tab=settings" class="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition {% if active_tab == 'settings' %}bg-indigo-600 text-white shadow-lg shadow-indigo-950{% else %}bg-slate-900/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800/80{% endif %}">
                 <i data-lucide="sliders" class="w-4 h-4"></i>
-                <span>Pengaturan & Channel</span>
+                <span>Pengaturan Channel & API</span>
             </a>
         </div>
 
-        <!-- =================== TAB 1: DASHBOARD & CHARTS =================== -->
+        <!-- =================== TAB 1: DASHBOARD METRIK =================== -->
         {% if active_tab == 'dashboard' %}
-        <div class="space-y-6">
+        <div class="space-y-5 sm:space-y-6">
 
-            <!-- Metrics Cards Grid -->
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
-                <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                    <span class="text-[11px] font-semibold text-slate-400">Total Produk</span>
-                    <div class="text-2xl font-extrabold text-white mt-1">{{ metrics.total }}</div>
-                    <span class="text-[10px] text-slate-500 mt-1 block">Shopee: {{ metrics.shopee_count }} • TikTok: {{ metrics.tiktok_count }}</span>
+            <!-- 4 Metric Cards (Responsive Grid) -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <div class="bg-slate-900/70 p-4 rounded-3xl border border-slate-800/80 shadow-md">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-semibold text-slate-400">Total Produk</span>
+                        <div class="w-7 h-7 rounded-lg bg-indigo-600/20 text-indigo-400 flex items-center justify-center">
+                            <i data-lucide="boxes" class="w-3.5 h-3.5"></i>
+                        </div>
+                    </div>
+                    <div class="text-xl sm:text-2xl font-extrabold text-white mt-2">{{ metrics.total_products }}</div>
+                    <div class="text-[10px] text-slate-400 mt-0.5">Semua status antrean</div>
                 </div>
-                <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                    <span class="text-[11px] font-semibold text-amber-400">Menunggu Review</span>
-                    <div class="text-2xl font-extrabold text-amber-400 mt-1">{{ metrics.pending }}</div>
-                    <span class="text-[10px] text-slate-500 mt-1 block">Status PENDING</span>
+
+                <div class="bg-slate-900/70 p-4 rounded-3xl border border-slate-800/80 shadow-md">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-semibold text-amber-400">Pending Review</span>
+                        <div class="w-7 h-7 rounded-lg bg-amber-600/20 text-amber-400 flex items-center justify-center">
+                            <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                        </div>
+                    </div>
+                    <div class="text-xl sm:text-2xl font-extrabold text-white mt-2">{{ metrics.pending }}</div>
+                    <div class="text-[10px] text-slate-400 mt-0.5">Menunggu persetujuan</div>
                 </div>
-                <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                    <span class="text-[11px] font-semibold text-emerald-400">Siap Diposting</span>
-                    <div class="text-2xl font-extrabold text-emerald-400 mt-1">{{ metrics.approved }}</div>
-                    <span class="text-[10px] text-slate-500 mt-1 block">Status APPROVED</span>
+
+                <div class="bg-slate-900/70 p-4 rounded-3xl border border-slate-800/80 shadow-md">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-semibold text-emerald-400">Siap Tayang (Approved)</span>
+                        <div class="w-7 h-7 rounded-lg bg-emerald-600/20 text-emerald-400 flex items-center justify-center">
+                            <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                        </div>
+                    </div>
+                    <div class="text-xl sm:text-2xl font-extrabold text-white mt-2">{{ metrics.approved }}</div>
+                    <div class="text-[10px] text-slate-400 mt-0.5">Siap posting otomatis</div>
                 </div>
-                <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                    <span class="text-[11px] font-semibold text-blue-400">Posting Hari Ini</span>
-                    <div class="text-2xl font-extrabold text-blue-400 mt-1">{{ metrics.posted_today }} / {{ settings.get('post_frequency_per_day', '3') }}</div>
-                    <span class="text-[10px] text-slate-500 mt-1 block">Waktu WIB</span>
-                </div>
-                <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                    <span class="text-[11px] font-semibold text-purple-400">Total Terposting</span>
-                    <div class="text-2xl font-extrabold text-purple-400 mt-1">{{ metrics.posted }}</div>
-                    <span class="text-[10px] text-slate-500 mt-1 block">Facebook, Threads, IG</span>
+
+                <div class="bg-slate-900/70 p-4 rounded-3xl border border-slate-800/80 shadow-md">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-semibold text-blue-400">Berhasil Terbit</span>
+                        <div class="w-7 h-7 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center">
+                            <i data-lucide="share" class="w-3.5 h-3.5"></i>
+                        </div>
+                    </div>
+                    <div class="text-xl sm:text-2xl font-extrabold text-white mt-2">{{ metrics.posted }}</div>
+                    <div class="text-[10px] text-slate-400 mt-0.5">Hari ini: {{ metrics.posted_today }}</div>
                 </div>
             </div>
 
             <!-- Charts Section -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Bar Chart: 7 Days Activity -->
-                <div class="lg:col-span-2 bg-slate-950 p-5 rounded-2xl border border-slate-800">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-xs font-bold text-white flex items-center gap-2">
-                            <i data-lucide="bar-chart-3" class="w-4 h-4 text-indigo-400"></i> Tren Publikasi 7 Hari Terakhir
-                        </h3>
-                        <span class="text-[11px] text-slate-400">Waktu WIB</span>
-                    </div>
-                    <div class="h-60">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+                <!-- Bar Chart: Weekly Activity -->
+                <div class="lg:col-span-2 bg-slate-900/70 p-4 sm:p-6 rounded-3xl border border-slate-800/80 shadow-md">
+                    <h3 class="text-xs sm:text-sm font-bold text-white mb-1 flex items-center gap-2">
+                        <i data-lucide="bar-chart-2" class="w-4 h-4 text-indigo-400"></i>
+                        <span>Tren Publikasi 7 Hari Terakhir</span>
+                    </h3>
+                    <p class="text-[11px] text-slate-400 mb-4">Jumlah postingan berhasil ke seluruh media sosial aktif per hari.</p>
+                    <div class="h-56 sm:h-64 relative">
                         <canvas id="chartWeeklyPosting"></canvas>
                     </div>
                 </div>
 
                 <!-- Doughnut Chart: Status Pipeline -->
-                <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                <div class="bg-slate-900/70 p-4 sm:p-6 rounded-3xl border border-slate-800/80 shadow-md flex flex-col justify-between">
                     <div>
-                        <h3 class="text-xs font-bold text-white flex items-center gap-2 mb-4">
-                            <i data-lucide="pie-chart" class="w-4 h-4 text-emerald-400"></i> Distribusi Status Antrean
+                        <h3 class="text-xs sm:text-sm font-bold text-white mb-1 flex items-center gap-2">
+                            <i data-lucide="pie-chart" class="w-4 h-4 text-indigo-400"></i>
+                            <span>Distribusi Antrean</span>
                         </h3>
-                        <div class="h-44 relative">
+                        <p class="text-[11px] text-slate-400 mb-4">Proporsi status produk di database.</p>
+                        <div class="h-44 sm:h-48 relative flex items-center justify-center">
                             <canvas id="chartStatusDoughnut"></canvas>
                         </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-2 text-[11px] mt-4 pt-3 border-t border-slate-800/80">
-                        <div class="flex items-center gap-2">
-                            <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
-                            <span class="text-slate-400">Pending: <strong class="text-white">{{ metrics.pending }}</strong></span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                            <span class="text-slate-400">Approved: <strong class="text-white">{{ metrics.approved }}</strong></span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
-                            <span class="text-slate-400">Posted: <strong class="text-white">{{ metrics.posted }}</strong></span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>
-                            <span class="text-slate-400">Rejected: <strong class="text-white">{{ metrics.rejected }}</strong></span>
-                        </div>
+                    <div class="grid grid-cols-2 gap-2 pt-4 border-t border-slate-800/80 text-[11px] text-slate-400">
+                        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Pending ({{ metrics.pending }})</div>
+                        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Approved ({{ metrics.approved }})</div>
+                        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span> Posted ({{ metrics.posted }})</div>
+                        <div class="flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full bg-slate-600"></span> Rejected ({{ metrics.rejected }})</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Best Practice Recommendation Banner -->
-            <div class="bg-gradient-to-r from-indigo-950/60 to-slate-950 p-5 rounded-2xl border border-indigo-900/40 text-xs">
+            <!-- Best Practice Recommendation Banner (Mobile Refined) -->
+            <div class="bg-gradient-to-br from-indigo-950/60 to-slate-900/90 p-4 sm:p-5 rounded-3xl border border-indigo-900/40 text-xs">
                 <div class="flex items-start gap-3">
                     <div class="p-2 rounded-xl bg-indigo-600/20 text-indigo-400 flex-shrink-0">
-                        <i data-lucide="lightbulb" class="w-5 h-5"></i>
+                        <i data-lucide="lightbulb" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                     </div>
-                    <div class="space-y-1.5">
-                        <h4 class="font-bold text-white text-sm">Rekomendasi Riset Jadwal & Frekuensi Posting Indonesia (WIB)</h4>
-                        <p class="text-slate-300 leading-relaxed">
-                            Berdasarkan data interaksi e-commerce di Facebook Page, Threads, dan Instagram, frekuensi terbaik adalah <strong>2 hingga 3 kali per hari</strong>. Posting lebih dari 4 kali per hari berisiko menurunkan jangkauan organik (reach penalty) dan memicu proteksi spam.
+                    <div class="space-y-2 w-full">
+                        <h4 class="font-bold text-white text-xs sm:text-sm">Rekomendasi Riset Jadwal & Frekuensi Posting Indonesia (WIB)</h4>
+                        <p class="text-slate-300 leading-relaxed text-[11px] sm:text-xs">
+                            Berdasarkan data interaksi e-commerce di Facebook Page, Threads, dan Instagram, frekuensi terbaik adalah <strong>2 hingga 3 kali per hari</strong> agar jangkauan organik (organic reach) optimal tanpa terkena penalti algoritma.
                         </p>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 text-[11px]">
-                            <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
-                                <span class="font-bold text-amber-400 block">Pagi: 07:30 – 08:30 WIB</span>
-                                <span class="text-slate-400">Pengguna memeriksa medsos saat perjalanan kerja & sarapan.</span>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-[11px]">
+                            <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800/80">
+                                <span class="font-bold text-amber-400 block mb-0.5">🌅 Pagi: 07:30 – 08:30 WIB</span>
+                                <span class="text-slate-400 text-[10px]">Perjalanan ke kantor/kampus dan waktu sarapan santai.</span>
                             </div>
-                            <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
-                                <span class="font-bold text-emerald-400 block">Siang: 12:00 – 13:00 WIB</span>
-                                <span class="text-slate-400">Waktu istirahat makan siang, puncak scrolling marketplace.</span>
+                            <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800/80">
+                                <span class="font-bold text-emerald-400 block mb-0.5">☀️ Siang: 12:00 – 13:00 WIB</span>
+                                <span class="text-slate-400 text-[10px]">Istirahat makan siang, puncak scrolling marketplace.</span>
                             </div>
-                            <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
-                                <span class="font-bold text-blue-400 block">Malam: 19:30 – 21:00 WIB</span>
-                                <span class="text-slate-400">Prime time interaksi tertinggi dan konversi transaksi terbanyak.</span>
+                            <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800/80">
+                                <span class="font-bold text-blue-400 block mb-0.5">🌙 Malam: 19:30 – 21:00 WIB</span>
+                                <span class="text-slate-400 text-[10px]">Prime time relaksasi, tingkat konversi belanja tertinggi.</span>
                             </div>
                         </div>
                     </div>
@@ -228,23 +251,24 @@
         </div>
         {% endif %}
 
-        <!-- =================== TAB 2: MANAJEMEN PRODUK =================== -->
+        <!-- =================== TAB 2: MANAJEMEN PRODUK (MOBILE FIRST & DETAIL CAPTION) =================== -->
         {% if active_tab == 'products' %}
-        <div class="space-y-4">
-            <!-- Filter Bar -->
-            <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
-                <div class="flex items-center gap-2">
-                    <span class="text-slate-400 font-semibold">Status:</span>
-                    <a href="/admin?tab=products&status_filter=ALL{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3 py-1.5 rounded-xl transition {% if status_filter == 'ALL' %}bg-slate-800 text-white font-bold{% else %}text-slate-400 hover:text-white{% endif %}">Semua</a>
-                    <a href="/admin?tab=products&status_filter=PENDING{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3 py-1.5 rounded-xl transition {% if status_filter == 'PENDING' %}bg-amber-600 text-white font-bold{% else %}text-slate-400 hover:text-white{% endif %}">Pending</a>
-                    <a href="/admin?tab=products&status_filter=APPROVED{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3 py-1.5 rounded-xl transition {% if status_filter == 'APPROVED' %}bg-emerald-600 text-white font-bold{% else %}text-slate-400 hover:text-white{% endif %}">Approved</a>
-                    <a href="/admin?tab=products&status_filter=POSTED{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3 py-1.5 rounded-xl transition {% if status_filter == 'POSTED' %}bg-blue-600 text-white font-bold{% else %}text-slate-400 hover:text-white{% endif %}">Posted</a>
+        <div class="space-y-4 sm:space-y-5">
+            <!-- Filter Bar (Responsive) -->
+            <div class="bg-slate-900/80 p-3.5 sm:p-4 rounded-3xl border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <!-- Status Filter Pills -->
+                <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+                    <span class="text-slate-400 font-semibold text-[11px] mr-1 hidden sm:inline">Status:</span>
+                    <a href="/admin?tab=products&status_filter=ALL{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3 py-1.5 rounded-xl transition text-[11px] font-bold flex-shrink-0 {% if status_filter == 'ALL' %}bg-indigo-600 text-white shadow-sm{% else %}bg-slate-950 text-slate-400 hover:text-white border border-slate-800{% endif %}">Semua</a>
+                    <a href="/admin?tab=products&status_filter=APPROVED{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3 py-1.5 rounded-xl transition text-[11px] font-bold flex-shrink-0 {% if status_filter == 'APPROVED' %}bg-emerald-600 text-white shadow-sm{% else %}bg-slate-950 text-slate-400 hover:text-white border border-slate-800{% endif %}">Approved</a>
+                    <a href="/admin?tab=products&status_filter=PENDING{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3 py-1.5 rounded-xl transition text-[11px] font-bold flex-shrink-0 {% if status_filter == 'PENDING' %}bg-amber-600 text-white shadow-sm{% else %}bg-slate-950 text-slate-400 hover:text-white border border-slate-800{% endif %}">Pending</a>
+                    <a href="/admin?tab=products&status_filter=POSTED{% if category_filter != 'ALL' %}&category_filter={{ category_filter }}{% endif %}" class="px-3 py-1.5 rounded-xl transition text-[11px] font-bold flex-shrink-0 {% if status_filter == 'POSTED' %}bg-blue-600 text-white shadow-sm{% else %}bg-slate-950 text-slate-400 hover:text-white border border-slate-800{% endif %}">Posted</a>
                 </div>
 
                 <!-- Category Filter Dropdown -->
-                <div class="flex items-center gap-2">
-                    <span class="text-slate-400 font-semibold">Kategori:</span>
-                    <select onchange="window.location.href='/admin?tab=products&status_filter={{ status_filter }}&category_filter=' + encodeURIComponent(this.value)" class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-white outline-none text-xs">
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <span class="text-slate-400 font-semibold text-[11px] hidden sm:inline">Kategori:</span>
+                    <select onchange="window.location.href='/admin?tab=products&status_filter={{ status_filter }}&category_filter=' + encodeURIComponent(this.value)" class="w-full sm:w-auto bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white outline-none text-xs focus:border-indigo-500">
                         <option value="ALL" {% if category_filter == 'ALL' %}selected{% endif %}>Semua Kategori</option>
                         {% for cat in categories %}
                         <option value="{{ cat }}" {% if category_filter == cat %}selected{% endif %}>{{ cat }}</option>
@@ -253,35 +277,120 @@
                 </div>
             </div>
 
-            <!-- Table of Products -->
-            <div class="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden">
+            {% if not products %}
+            <div class="bg-slate-900/40 rounded-3xl border border-slate-800 p-8 sm:p-12 text-center text-slate-500">
+                <i data-lucide="package-open" class="w-8 h-8 sm:w-10 sm:h-10 mx-auto mb-2 opacity-50"></i>
+                <p class="text-xs sm:text-sm font-semibold">Tidak ada produk yang cocok dengan filter saat ini.</p>
+                <button type="button" onclick="document.getElementById('modal-quick-add').classList.remove('hidden')" class="mt-4 inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-bold">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                    <span>Tambah Produk Baru Sekarang</span>
+                </button>
+            </div>
+            {% endif %}
+
+            <!-- MOBILE CARD VIEW (< 768px): No cut-off strings, full readability -->
+            <div class="grid grid-cols-1 gap-3.5 md:hidden">
+                {% for p in products %}
+                <div class="bg-slate-900/80 p-4 rounded-3xl border border-slate-800 shadow-md space-y-3">
+                    <!-- Card Top: Thumbnail + Title + Status -->
+                    <div class="flex items-start gap-3">
+                        <img src="{{ p.image_url }}" alt="{{ p.product_name }}" class="w-16 h-16 rounded-2xl object-cover bg-slate-950 border border-slate-800 flex-shrink-0 cursor-pointer shadow-sm" onclick="openDetailModal('{{ p.item_id }}')">
+                        <div class="min-w-0 flex-grow">
+                            <div class="flex items-center justify-between gap-2 mb-1">
+                                <span class="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase {% if p.status == 'APPROVED' %}bg-emerald-950 text-emerald-400 border border-emerald-800/60{% elif p.status == 'POSTED' %}bg-blue-950 text-blue-400 border border-blue-800/60{% elif p.status == 'PENDING' %}bg-amber-950 text-amber-400 border border-amber-800/60{% else %}bg-slate-800 text-slate-400{% endif %}">
+                                    {{ p.status }}
+                                </span>
+                                <span class="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase {% if p.platform == 'SHOPEE' %}bg-orange-950 text-orange-400 border border-orange-800/60{% elif p.platform == 'TIKTOK' %}bg-rose-950 text-rose-400 border border-rose-800/60{% else %}bg-purple-950 text-purple-400 border border-purple-800/60{% endif %}">
+                                    {{ p.platform }}
+                                </span>
+                            </div>
+                            <h4 class="font-bold text-white text-xs leading-snug line-clamp-2 cursor-pointer hover:text-indigo-300" onclick="openDetailModal('{{ p.item_id }}')">
+                                {{ p.product_name }}
+                            </h4>
+                            <div class="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
+                                <span>{{ p.category or 'Umum' }}</span>
+                                <span>•</span>
+                                <span class="font-bold text-emerald-400">
+                                    {% if p.price %}Rp{{ "{:,}".format(p.price|int).replace(",", ".") }}{% else %}-{% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Caption Preview Box (Clickable to open full detail modal) -->
+                    <div class="bg-slate-950/70 p-3 rounded-2xl border border-slate-800/60 cursor-pointer hover:border-slate-700 transition" onclick="openDetailModal('{{ p.item_id }}')">
+                        <div class="flex items-center justify-between mb-1 text-[10px] text-slate-400 font-semibold">
+                            <span class="flex items-center gap-1 text-indigo-400">
+                                <i data-lucide="sparkles" class="w-3 h-3"></i> Pratinjau Caption Edukasi AI
+                            </span>
+                            <span class="text-indigo-400 font-bold">Buka Lengkap &rarr;</span>
+                        </div>
+                        <p class="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">
+                            {{ p.caption or 'Belum ada caption.' }}
+                        </p>
+                    </div>
+
+                    <!-- Mobile Action Buttons Bar -->
+                    <div class="flex items-center gap-2 pt-1 border-t border-slate-800/60">
+                        <button type="button" onclick="openDetailModal('{{ p.item_id }}')" class="flex-grow bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold py-2 px-3 rounded-xl transition flex items-center justify-center gap-1.5 border border-slate-700/60">
+                            <i data-lucide="eye" class="w-3.5 h-3.5 text-indigo-400"></i>
+                            <span>Detail & Caption</span>
+                        </button>
+
+                        {% if p.status == 'APPROVED' %}
+                        <form action="/admin/action" method="POST" class="inline">
+                            <input type="hidden" name="item_id" value="{{ p.item_id }}">
+                            <input type="hidden" name="action" value="publish_now">
+                            <button type="submit" title="Posting Sekarang" class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold py-2 px-3.5 rounded-xl transition flex items-center gap-1 shadow-sm">
+                                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                                <span>Posting</span>
+                            </button>
+                        </form>
+                        {% elif p.status == 'PENDING' %}
+                        <form action="/admin/action" method="POST" class="inline">
+                            <input type="hidden" name="item_id" value="{{ p.item_id }}">
+                            <input type="hidden" name="action" value="approve">
+                            <button type="submit" title="Setujui" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2 px-3 rounded-xl transition flex items-center gap-1">
+                                <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                <span>Setujui</span>
+                            </button>
+                        </form>
+                        {% endif %}
+
+                        <form action="/admin/action" method="POST" class="inline" onsubmit="return confirm('Hapus produk ini?')">
+                            <input type="hidden" name="item_id" value="{{ p.item_id }}">
+                            <input type="hidden" name="action" value="delete">
+                            <button type="submit" title="Hapus" class="p-2 rounded-xl bg-rose-950/40 text-rose-400 hover:bg-rose-900/60 border border-rose-900/40 transition">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- DESKTOP TABLE VIEW (>= 768px) -->
+            <div class="hidden md:block bg-slate-900/70 rounded-3xl border border-slate-800 overflow-hidden shadow-lg">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-xs">
-                        <thead class="bg-slate-900/60 text-slate-400 text-[11px] uppercase border-b border-slate-800">
+                        <thead class="bg-slate-950/80 text-slate-400 text-[11px] uppercase border-b border-slate-800">
                             <tr>
-                                <th class="px-4 py-3">Produk</th>
-                                <th class="px-4 py-3">Kategori</th>
-                                <th class="px-4 py-3">Harga</th>
-                                <th class="px-4 py-3">Performa</th>
-                                <th class="px-4 py-3">Status</th>
-                                <th class="px-4 py-3 text-right">Aksi</th>
+                                <th class="px-4 py-3.5">Produk</th>
+                                <th class="px-4 py-3.5">Kategori</th>
+                                <th class="px-4 py-3.5">Harga & Rating</th>
+                                <th class="px-4 py-3.5">Pratinjau Caption</th>
+                                <th class="px-4 py-3.5 text-center">Status</th>
+                                <th class="px-4 py-3.5 text-right">Aksi</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-800/60">
-                            {% if not products %}
-                            <tr>
-                                <td colspan="6" class="px-4 py-8 text-center text-slate-500">
-                                    Tidak ada produk yang cocok dengan filter.
-                                </td>
-                            </tr>
-                            {% endif %}
                             {% for p in products %}
-                            <tr class="hover:bg-slate-900/40 transition">
-                                <td class="px-4 py-3">
+                            <tr class="hover:bg-slate-800/40 transition">
+                                <td class="px-4 py-3.5">
                                     <div class="flex items-center gap-3">
-                                        <img src="{{ p.image_url }}" alt="" class="w-10 h-10 rounded-lg object-cover bg-slate-800 flex-shrink-0">
+                                        <img src="{{ p.image_url }}" alt="{{ p.product_name }}" class="w-11 h-11 rounded-xl object-cover bg-slate-950 border border-slate-800 flex-shrink-0 cursor-pointer shadow-sm" onclick="openDetailModal('{{ p.item_id }}')">
                                         <div class="max-w-xs">
-                                            <a href="{{ p.product_url }}" target="_blank" class="font-semibold text-slate-200 hover:text-indigo-400 line-clamp-1">
+                                            <a href="javascript:void(0)" onclick="openDetailModal('{{ p.item_id }}')" class="font-bold text-slate-100 hover:text-indigo-400 line-clamp-1">
                                                 {{ p.product_name }}
                                             </a>
                                             <div class="flex items-center gap-2 mt-0.5 text-[10px]">
@@ -293,58 +402,68 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-4 py-3 whitespace-nowrap">
-                                    <span class="text-slate-300 bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">
+                                <td class="px-4 py-3.5 whitespace-nowrap">
+                                    <span class="text-slate-300 bg-slate-950 px-2.5 py-1 rounded-xl border border-slate-800 text-[11px]">
                                         {{ p.category or 'Umum' }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3 font-semibold text-slate-200 whitespace-nowrap">
-                                    {% if p.price %}
-                                    Rp{{ "{:,}".format(p.price|int).replace(",", ".") }}
-                                    {% else %}
-                                    -
-                                    {% endif %}
+                                <td class="px-4 py-3.5 whitespace-nowrap">
+                                    <div class="font-bold text-slate-100">
+                                        {% if p.price %}Rp{{ "{:,}".format(p.price|int).replace(",", ".") }}{% else %}-{% endif %}
+                                    </div>
+                                    <div class="text-[10px] text-slate-400 mt-0.5">
+                                        ⭐ {{ "%.1f"|format(p.rating) }} • Terjual {{ p.sales }}
+                                    </div>
                                 </td>
-                                <td class="px-4 py-3 text-slate-400 whitespace-nowrap">
-                                    <div>Terjual: <strong class="text-white">{{ p.sales }}</strong></div>
-                                    <div class="text-[10px]">Rating: ⭐ {{ "%.1f"|format(p.rating) }}</div>
+                                <td class="px-4 py-3.5 max-w-sm">
+                                    <div class="bg-slate-950/60 p-2 rounded-xl border border-slate-800/60 cursor-pointer hover:border-slate-700 transition" onclick="openDetailModal('{{ p.item_id }}')">
+                                        <p class="text-[11px] text-slate-300 line-clamp-2 leading-relaxed">
+                                            {{ p.caption or 'Belum ada caption.' }}
+                                        </p>
+                                    </div>
                                 </td>
-                                <td class="px-4 py-3 whitespace-nowrap">
-                                    <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase {% if p.status == 'APPROVED' %}bg-emerald-950 text-emerald-400 border border-emerald-800/60{% elif p.status == 'POSTED' %}bg-blue-950 text-blue-400 border border-blue-800/60{% elif p.status == 'PENDING' %}bg-amber-950 text-amber-400 border border-amber-800/60{% else %}bg-slate-800 text-slate-400{% endif %}">
+                                <td class="px-4 py-3.5 whitespace-nowrap text-center">
+                                    <span class="px-2.5 py-1 rounded-xl text-[10px] font-bold uppercase {% if p.status == 'APPROVED' %}bg-emerald-950 text-emerald-400 border border-emerald-800/60{% elif p.status == 'POSTED' %}bg-blue-950 text-blue-400 border border-blue-800/60{% elif p.status == 'PENDING' %}bg-amber-950 text-amber-400 border border-amber-800/60{% else %}bg-slate-800 text-slate-400{% endif %}">
                                         {{ p.status }}
                                     </span>
                                 </td>
-                                <td class="px-4 py-3 text-right whitespace-nowrap">
+                                <td class="px-4 py-3.5 text-right whitespace-nowrap">
                                     <div class="flex items-center justify-end gap-1.5">
+                                        <!-- Detail Button -->
+                                        <button type="button" onclick="openDetailModal('{{ p.item_id }}')" title="Buka Detail & Caption Lengkap" class="p-2 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition">
+                                            <i data-lucide="eye" class="w-4 h-4"></i>
+                                        </button>
+
                                         {% if p.status == 'PENDING' %}
                                         <form action="/admin/action" method="POST" class="inline">
                                             <input type="hidden" name="item_id" value="{{ p.item_id }}">
                                             <input type="hidden" name="action" value="approve">
-                                            <button type="submit" title="Setujui" class="p-1.5 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white transition">
-                                                <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                                            <button type="submit" title="Setujui (Approved)" class="p-2 rounded-xl bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white transition">
+                                                <i data-lucide="check" class="w-4 h-4"></i>
                                             </button>
                                         </form>
                                         <form action="/admin/action" method="POST" class="inline">
                                             <input type="hidden" name="item_id" value="{{ p.item_id }}">
                                             <input type="hidden" name="action" value="reject">
-                                            <button type="submit" title="Tolak" class="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white transition">
-                                                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                                            <button type="submit" title="Tolak" class="p-2 rounded-xl bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white transition">
+                                                <i data-lucide="x" class="w-4 h-4"></i>
                                             </button>
                                         </form>
                                         {% elif p.status == 'APPROVED' %}
                                         <form action="/admin/action" method="POST" class="inline">
                                             <input type="hidden" name="item_id" value="{{ p.item_id }}">
                                             <input type="hidden" name="action" value="publish_now">
-                                            <button type="submit" title="Posting Langsung" class="p-1.5 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white transition">
-                                                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                                            <button type="submit" title="Posting Sekarang" class="p-2 rounded-xl bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white transition">
+                                                <i data-lucide="send" class="w-4 h-4"></i>
                                             </button>
                                         </form>
                                         {% endif %}
+
                                         <form action="/admin/action" method="POST" class="inline" onsubmit="return confirm('Hapus produk ini?')">
                                             <input type="hidden" name="item_id" value="{{ p.item_id }}">
                                             <input type="hidden" name="action" value="delete">
-                                            <button type="submit" title="Hapus" class="p-1.5 rounded-lg bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white transition">
-                                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                                            <button type="submit" title="Hapus" class="p-2 rounded-xl bg-rose-600/20 text-rose-400 hover:bg-rose-600 hover:text-white transition">
+                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
                                             </button>
                                         </form>
                                     </div>
@@ -358,38 +477,57 @@
         </div>
         {% endif %}
 
-        <!-- =================== TAB 3: LOG AKTIVITAS =================== -->
+        <!-- =================== TAB 3: LOG AKTIVITAS (RESPONSIVE) =================== -->
         {% if active_tab == 'logs' %}
         <div class="space-y-4">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                    <h3 class="text-sm font-bold text-white">Log Audit Otomasi & Aktivitas</h3>
-                    <p class="text-[11px] text-slate-400">Rekaman jejak eksekusi scraper, Gemini AI, dan penerbitan sosial.</p>
+                    <h3 class="text-xs sm:text-sm font-bold text-white">Log Audit Otomasi & Aktivitas</h3>
+                    <p class="text-[10px] sm:text-[11px] text-slate-400">Rekaman jejak eksekusi scraper, Gemini AI, dan penerbitan sosial.</p>
                 </div>
-                <form action="/admin/trigger/retry-comments" method="POST" class="inline">
-                    <button type="submit" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3.5 py-2 rounded-xl border border-slate-700 transition flex items-center gap-1.5">
-                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                <form action="/admin/trigger/retry-comments" method="POST" class="w-full sm:w-auto">
+                    <button type="submit" class="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-slate-200 text-xs font-semibold px-3.5 py-2 rounded-xl border border-slate-800 transition flex items-center justify-center gap-1.5">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-indigo-400"></i>
                         <span>Ulangi Komentar Tertunda</span>
                     </button>
                 </form>
             </div>
 
-            <div class="bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden">
+            <!-- Mobile Cards for Logs (< 768px) -->
+            <div class="grid grid-cols-1 gap-2.5 md:hidden text-xs">
+                {% for l in logs %}
+                <div class="bg-slate-900/70 p-3.5 rounded-2xl border border-slate-800 space-y-1.5">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="font-bold text-slate-200 font-mono text-[11px]">{{ l.event_type }}</span>
+                        <span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase {% if l.status == 'SUCCESS' %}bg-emerald-950 text-emerald-400 border border-emerald-800/60{% else %}bg-rose-950 text-rose-400 border border-rose-800/60{% endif %}">
+                            {{ l.status }}
+                        </span>
+                    </div>
+                    <p class="text-slate-300 text-[11px] leading-relaxed break-words">{{ l.message }}</p>
+                    <div class="text-[10px] text-slate-500 pt-1 border-t border-slate-800/60">
+                        {{ l.created_at[:19].replace("T", " ") }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Desktop Table for Logs (>= 768px) -->
+            <div class="hidden md:block bg-slate-900/70 rounded-3xl border border-slate-800 overflow-hidden shadow-md">
                 <table class="w-full text-left text-xs">
-                    <thead class="bg-slate-900/60 text-slate-400 text-[11px] uppercase border-b border-slate-800">
+                    <thead class="bg-slate-950/80 text-slate-400 text-[11px] uppercase border-b border-slate-800">
                         <tr>
-                            <th class="px-4 py-3">Waktu</th>
-                            <th class="px-4 py-3">Event</th>
-                            <th class="px-4 py-3">Detail Pesan</th>
-                            <th class="px-4 py-3 text-right">Status</th>
+                            <th class="px-4 py-3.5">Waktu</th>
+                            <th class="px-4 py-3.5">Event</th>
+                            <th class="px-4 py-3.5">Detail Pesan</th>
+                            <th class="px-4 py-3.5 text-right">Status</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-800/60">
                         {% for l in logs %}
-                        <tr class="hover:bg-slate-900/40">
-                            <td class="px-4 py-3 text-slate-400 whitespace-nowrap">{{ l.created_at[:19].replace("T", " ") }}</td>
+                        <tr class="hover:bg-slate-800/30">
+                            <td class="px-4 py-3 text-slate-400 whitespace-nowrap text-[11px]">{{ l.created_at[:19].replace("T", " ") }}</td>
                             <td class="px-4 py-3 font-semibold text-slate-300">{{ l.event_type }}</td>
-                            <td class="px-4 py-3 text-slate-200">{{ l.message }}</td>
+                            <td class="px-4 py-3 text-slate-200 max-w-lg break-words">{{ l.message }}</td>
                             <td class="px-4 py-3 text-right">
                                 <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase {% if l.status == 'SUCCESS' %}bg-emerald-950 text-emerald-400 border border-emerald-800/60{% else %}bg-rose-950 text-rose-400 border border-rose-800/60{% endif %}">
                                     {{ l.status }}
@@ -403,205 +541,218 @@
         </div>
         {% endif %}
 
-        <!-- =================== TAB 4: PENGATURAN SISTEM =================== -->
+        <!-- =================== TAB 4: PENGATURAN SISTEM (MOBILE RESPONSIVE) =================== -->
         {% if active_tab == 'settings' %}
-        <div class="max-w-4xl space-y-6">
+        <div class="max-w-4xl space-y-5 sm:space-y-6">
 
             <!-- Meta Developer App Callbacks Reference Box -->
-            <div class="bg-slate-950 p-5 rounded-2xl border border-indigo-900/40">
+            <div class="bg-slate-900/70 p-4 sm:p-5 rounded-3xl border border-indigo-900/40 shadow-lg">
                 <div class="flex items-start gap-3">
                     <div class="p-2 rounded-xl bg-indigo-600/20 text-indigo-400 flex-shrink-0">
-                        <i data-lucide="shield" class="w-5 h-5"></i>
+                        <i data-lucide="shield" class="w-4 h-4 sm:w-5 sm:h-5"></i>
                     </div>
-                    <div class="space-y-3 w-full">
+                    <div class="space-y-3 w-full min-w-0">
                         <div>
-                            <h3 class="text-sm font-bold text-white">Panduan Pengisian Dashboard Meta Developer (Threads & FB API)</h3>
-                            <p class="text-[11px] text-slate-400 mt-0.5">
-                                Salin URL berikut ke form pengaturan aplikasi Meta di tab <strong>Akses Threads API &rarr; Pengaturan</strong>:
+                            <h3 class="text-xs sm:text-sm font-bold text-white">Panduan Pengisian Dashboard Meta Developer (Threads & FB API)</h3>
+                            <p class="text-[10px] sm:text-[11px] text-slate-400 mt-0.5">
+                                Salin URL callback berikut ke form pengaturan aplikasi Meta di tab <strong>Akses Threads API &rarr; Pengaturan</strong>:
                             </p>
                         </div>
-                        <div class="grid grid-cols-1 gap-2.5 text-xs">
-                            <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                                <span class="text-[10px] text-slate-400 font-semibold block">URL Callback Alihkan (Valid OAuth Redirect URI):</span>
-                                <code class="text-indigo-400 font-mono text-[11px] select-all">https://temuan-harian.pdfumi.com/auth/threads/callback</code>
-                            </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                                <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                                    <span class="text-[10px] text-slate-400 font-semibold block">Hapus Instalan URL Callback (Deauthorize):</span>
-                                    <code class="text-indigo-400 font-mono text-[11px] select-all">https://temuan-harian.pdfumi.com/auth/threads/deauth</code>
-                                </div>
-                                <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-                                    <span class="text-[10px] text-slate-400 font-semibold block">Hapus URL Callback (Data Deletion):</span>
-                                    <code class="text-indigo-400 font-mono text-[11px] select-all">https://temuan-harian.pdfumi.com/auth/threads/delete</code>
+                        <div class="space-y-2 text-xs">
+                            <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                                <span class="text-[10px] text-slate-400 font-semibold block mb-1">URL Callback Alihkan (Valid OAuth Redirect URI):</span>
+                                <div class="flex items-center justify-between gap-2">
+                                    <code class="text-indigo-400 font-mono text-[11px] break-all select-all">https://temuan-harian.pdfumi.com/auth/threads/callback</code>
+                                    <button type="button" onclick="navigator.clipboard.writeText('https://temuan-harian.pdfumi.com/auth/threads/callback'); alert('Disalin ke clipboard!')" class="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 flex-shrink-0">
+                                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                                    </button>
                                 </div>
                             </div>
-                        </div>
-                        <div class="p-2.5 rounded-xl bg-amber-950/40 border border-amber-800/40 text-[11px] text-amber-300">
-                            <strong>Tips Praktis Cepat:</strong> Anda tidak perlu menunggu App Review publik! Di bagian bawah halaman Meta Developer Anda terdapat <strong>"Generator Token Pengguna" (Penguji Threads)</strong>. Cukup klik tombol <em>"Tambahkan atau Hapus Penguji Threads"</em>, tambahkan akun Threads pribadi Anda, dan buat Token Akses Jangka Panjang dalam 1 kali klik!
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                                    <span class="text-[10px] text-slate-400 font-semibold block mb-1">Hapus Instalan URL Callback (Deauthorize):</span>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <code class="text-indigo-400 font-mono text-[10px] break-all select-all">https://temuan-harian.pdfumi.com/auth/threads/deauth</code>
+                                        <button type="button" onclick="navigator.clipboard.writeText('https://temuan-harian.pdfumi.com/auth/threads/deauth'); alert('Disalin!')" class="p-1 rounded-lg bg-slate-900 text-slate-400 flex-shrink-0">
+                                            <i data-lucide="copy" class="w-3 h-3"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                                    <span class="text-[10px] text-slate-400 font-semibold block mb-1">Hapus URL Callback (Data Deletion):</span>
+                                    <div class="flex items-center justify-between gap-2">
+                                        <code class="text-indigo-400 font-mono text-[10px] break-all select-all">https://temuan-harian.pdfumi.com/auth/threads/delete</code>
+                                        <button type="button" onclick="navigator.clipboard.writeText('https://temuan-harian.pdfumi.com/auth/threads/delete'); alert('Disalin!')" class="p-1 rounded-lg bg-slate-900 text-slate-400 flex-shrink-0">
+                                            <i data-lucide="copy" class="w-3 h-3"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Main Settings Form -->
-            <div class="bg-slate-950 p-6 rounded-2xl border border-slate-800">
-                <form action="/admin/settings/save" method="POST" class="space-y-6 text-xs">
+            <div class="bg-slate-900/70 p-5 sm:p-6 rounded-3xl border border-slate-800 shadow-xl">
+                <form action="/admin/settings/save" method="POST" class="space-y-5 text-xs">
 
                     <!-- Section: Multi-Posting Channels Selection -->
                     <div>
                         <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                            <i data-lucide="radio" class="w-4 h-4 text-indigo-400"></i> Channel Posting Sosial
+                            <i data-lucide="share-2" class="w-4 h-4 text-blue-400"></i> Kanal Publikasi Otomatis (Multi-Channel)
                         </h4>
-                        <p class="text-[11px] text-slate-400 mb-3">Pilih ke platform mana saja produk akan dipublikasikan secara otomatis:</p>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <label class="p-3 rounded-xl border border-slate-800 bg-slate-900 flex items-center gap-3 cursor-pointer hover:border-slate-700 transition">
-                                <input type="checkbox" name="channel_fb_enabled" value="1" {% if settings.get('channel_fb_enabled', '1') == '1' %}checked{% endif %} class="rounded bg-slate-800 border-slate-700 text-indigo-600">
+                            <label class="flex items-center gap-3 p-3 rounded-2xl bg-slate-950 border border-slate-800 cursor-pointer hover:border-slate-700 transition">
+                                <input type="checkbox" name="channel_fb_enabled" value="1" {% if settings.get('channel_fb_enabled', '1') == '1' %}checked{% endif %} class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-blue-600 focus:ring-0">
                                 <div>
                                     <span class="font-bold text-white block">Facebook Page</span>
-                                    <span class="text-[10px] text-slate-400">Fanspage Temuan Harian</span>
+                                    <span class="text-[10px] text-slate-400">Posting foto feed + first comment</span>
                                 </div>
                             </label>
-                            <label class="p-3 rounded-xl border border-slate-800 bg-slate-900 flex items-center gap-3 cursor-pointer hover:border-slate-700 transition">
-                                <input type="checkbox" name="channel_threads_enabled" value="1" {% if settings.get('channel_threads_enabled') == '1' %}checked{% endif %} class="rounded bg-slate-800 border-slate-700 text-purple-600">
+
+                            <label class="flex items-center gap-3 p-3 rounded-2xl bg-slate-950 border border-slate-800 cursor-pointer hover:border-slate-700 transition">
+                                <input type="checkbox" name="channel_threads_enabled" value="1" {% if settings.get('channel_threads_enabled') == '1' %}checked{% endif %} class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-purple-600 focus:ring-0">
                                 <div>
-                                    <span class="font-bold text-white block">Threads</span>
-                                    <span class="text-[10px] text-slate-400">Akun Threads Meta</span>
+                                    <span class="font-bold text-white block">Threads API</span>
+                                    <span class="text-[10px] text-slate-400">Terbit otomatis ke feed Threads</span>
                                 </div>
                             </label>
-                            <label class="p-3 rounded-xl border border-slate-800 bg-slate-900 flex items-center gap-3 cursor-pointer hover:border-slate-700 transition">
-                                <input type="checkbox" name="channel_ig_enabled" value="1" {% if settings.get('channel_ig_enabled') == '1' %}checked{% endif %} class="rounded bg-slate-800 border-slate-700 text-rose-600">
+
+                            <label class="flex items-center gap-3 p-3 rounded-2xl bg-slate-950 border border-slate-800 cursor-pointer hover:border-slate-700 transition">
+                                <input type="checkbox" name="channel_ig_enabled" value="1" {% if settings.get('channel_ig_enabled') == '1' %}checked{% endif %} class="w-4 h-4 rounded bg-slate-900 border-slate-700 text-rose-600 focus:ring-0">
                                 <div>
-                                    <span class="font-bold text-white block">Instagram</span>
-                                    <span class="text-[10px] text-slate-400">Feed & Komentar Link</span>
+                                    <span class="font-bold text-white block">Instagram Graph</span>
+                                    <span class="text-[10px] text-slate-400">Akun profesional / kreator</span>
                                 </div>
                             </label>
                         </div>
                     </div>
 
-                    <!-- Section: Schedule & Frequency -->
-                    <div class="pt-4 border-t border-slate-800/80">
+                    <!-- Section: Posting Frequency & Hours -->
+                    <div class="pt-4 border-t border-slate-800">
                         <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                            <i data-lucide="clock" class="w-4 h-4 text-amber-400"></i> Frekuensi & Jadwal Jam Tayang (WIB)
+                            <i data-lucide="clock" class="w-4 h-4 text-amber-400"></i> Frekuensi & Jadwal Tayang Harian
                         </h4>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                             <div>
-                                <label class="block font-semibold mb-1 text-slate-300">Frekuensi Posting Per Hari</label>
-                                <input type="number" name="post_frequency_per_day" value="{{ settings.get('post_frequency_per_day', '3') }}" min="1" max="10" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
-                                <span class="text-[10px] text-slate-500 mt-1 block">Rekomendasi aman: 2 atau 3 posting per hari.</span>
+                                <label class="block font-semibold mb-1 text-slate-300">Maksimal Posting Per Hari</label>
+                                <input type="number" name="post_frequency_per_day" value="{{ settings.get('post_frequency_per_day', '3') }}" min="1" max="10" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                                <span class="text-[10px] text-slate-400 mt-1 block">Rekomendasi terbaik: 2-3 kali per hari.</span>
                             </div>
                             <div>
-                                <label class="block font-semibold mb-1 text-slate-300">Jam Tayang Posting (Format 24 Jam, Pisahkan Koma)</label>
-                                <input type="text" name="post_schedule_times" value="{{ settings.get('post_schedule_times', '08:00, 12:30, 19:30') }}" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
-                                <span class="text-[10px] text-slate-500 mt-1 block">Contoh rekomendasi: 08:00, 12:30, 19:30 (WIB)</span>
+                                <label class="block font-semibold mb-1 text-slate-300">Jam Tayang Rekomendasi (WIB)</label>
+                                <input type="text" name="post_schedule_times" value="{{ settings.get('post_schedule_times', '08:00, 12:30, 19:30') }}" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                                <span class="text-[10px] text-slate-400 mt-1 block">Format: HH:MM, pisahkan dengan koma.</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- Section: Gemini AI Caption Engine -->
-                    <div class="pt-4 border-t border-slate-800/80">
+                    <div class="pt-4 border-t border-slate-800">
                         <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                            <i data-lucide="sparkles" class="w-4 h-4 text-indigo-400"></i> Gemini AI Educational Caption Engine
+                            <i data-lucide="sparkles" class="w-4 h-4 text-indigo-400"></i> Google Gemini AI Caption Engine
                         </h4>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                             <div>
                                 <label class="block font-semibold mb-1 text-slate-300">Gemini API Key</label>
-                                <input type="password" name="gemini_api_key" value="{{ settings.get('gemini_api_key', '') }}" placeholder="Masukkan Gemini API Key..." class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                                <input type="password" name="gemini_api_key" value="{{ settings.get('gemini_api_key', '') }}" placeholder="Masukkan Gemini API Key..." class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
                             </div>
                             <div>
                                 <label class="block font-semibold mb-1 text-slate-300">Model Gemini</label>
-                                <input type="text" name="gemini_model" value="{{ settings.get('gemini_model', 'gemini-3.8-flash') }}" placeholder="gemini-3.8-flash" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                                <input type="text" name="gemini_model" value="{{ settings.get('gemini_model', 'gemini-3.8-flash') }}" placeholder="gemini-3.8-flash" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
                             </div>
                         </div>
                         <span class="text-[10px] text-slate-400 mt-1 block">Caption AI dibuat edukatif, faktual berdasarkan data spesifikasi riil, bebas hoaks, serta mematuhi norma halal & aman.</span>
                     </div>
 
                     <!-- Section: Threads Credentials -->
-                    <div class="pt-4 border-t border-slate-800/80">
+                    <div class="pt-4 border-t border-slate-800">
                         <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-2 flex items-center gap-1.5">
                             <i data-lucide="at-sign" class="w-4 h-4 text-purple-400"></i> Kredensial Threads API
                         </h4>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                             <div>
                                 <label class="block font-semibold mb-1 text-slate-300">ID Aplikasi Threads</label>
-                                <input type="text" name="threads_app_id" value="{{ settings.get('threads_app_id', '1859560825052480') }}" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                                <input type="text" name="threads_app_id" value="{{ settings.get('threads_app_id', '1859560825052480') }}" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
                             </div>
                             <div>
                                 <label class="block font-semibold mb-1 text-slate-300">Rahasia Aplikasi (App Secret)</label>
-                                <input type="password" name="threads_app_secret" value="{{ settings.get('threads_app_secret', '') }}" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                                <input type="password" name="threads_app_secret" value="{{ settings.get('threads_app_secret', '') }}" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
                             </div>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-3">
                             <div>
                                 <label class="block font-semibold mb-1 text-slate-300">Threads User ID</label>
-                                <input type="text" name="threads_user_id" value="{{ settings.get('threads_user_id', '') }}" placeholder="User ID Threads Anda" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                                <input type="text" name="threads_user_id" value="{{ settings.get('threads_user_id', '') }}" placeholder="User ID Threads Anda" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
                             </div>
                             <div>
                                 <label class="block font-semibold mb-1 text-slate-300">Threads User Access Token</label>
-                                <input type="password" name="threads_access_token" value="{{ settings.get('threads_access_token', '') }}" placeholder="Token Akses Threads" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                                <input type="password" name="threads_access_token" value="{{ settings.get('threads_access_token', '') }}" placeholder="Token Akses Threads" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
                             </div>
                         </div>
                     </div>
 
-                    <!-- Section: Facebook & Instagram Credentials -->
-                    <div class="pt-4 border-t border-slate-800/80">
+                    <!-- Section: Facebook & Instagram -->
+                    <div class="pt-4 border-t border-slate-800">
                         <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                            <i data-lucide="share" class="w-4 h-4 text-blue-400"></i> Kredensial Facebook Page & Instagram
+                            <i data-lucide="facebook" class="w-4 h-4 text-blue-400"></i> Facebook Fanspage & Instagram
                         </h4>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                             <div>
                                 <label class="block font-semibold mb-1 text-slate-300">Facebook Page ID</label>
-                                <input type="text" name="fb_page_id" value="{{ settings.get('fb_page_id', '') }}" placeholder="Masukkan Facebook Page ID" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                                <input type="text" name="fb_page_id" value="{{ settings.get('fb_page_id', '') }}" placeholder="Masukkan Facebook Page ID" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
                             </div>
                             <div>
                                 <label class="block font-semibold mb-1 text-slate-300">Facebook Page Access Token</label>
-                                <input type="password" name="fb_page_access_token" placeholder="Biarkan kosong jika tidak diubah" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                                <input type="password" name="fb_page_access_token" placeholder="Biarkan kosong jika tidak diubah" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
                             </div>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-3">
                             <div>
                                 <label class="block font-semibold mb-1 text-slate-300">Instagram Professional User ID</label>
-                                <input type="text" name="ig_user_id" value="{{ settings.get('ig_user_id', '') }}" placeholder="ID Akun Instagram Bisnis" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                                <input type="text" name="ig_user_id" value="{{ settings.get('ig_user_id', '') }}" placeholder="ID Akun Instagram Bisnis" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
                             </div>
                             <div>
                                 <label class="block font-semibold mb-1 text-slate-300">Instagram Access Token</label>
-                                <input type="password" name="ig_access_token" value="{{ settings.get('ig_access_token', '') }}" placeholder="Token Akses Instagram" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                                <input type="password" name="ig_access_token" value="{{ settings.get('ig_access_token', '') }}" placeholder="Token Akses Instagram" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
                             </div>
                         </div>
                     </div>
 
                     <!-- Section: Meta Marketing API (Iklan) & Affiliate IDs -->
-                    <div class="pt-4 border-t border-slate-800/80">
+                    <div class="pt-4 border-t border-slate-800">
                         <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-2 flex items-center gap-1.5">
                             <i data-lucide="megaphone" class="w-4 h-4 text-emerald-400"></i> Meta Marketing API (Iklan) & ID Afiliasi
                         </h4>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
                                 <label class="block font-semibold mb-1 text-slate-300">Meta Ad Account ID</label>
-                                <input type="text" name="meta_ad_account_id" value="{{ settings.get('meta_ad_account_id', '') }}" placeholder="act_123456789" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                                <input type="text" name="meta_ad_account_id" value="{{ settings.get('meta_ad_account_id', '') }}" placeholder="act_123456789" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
                             </div>
                             <div>
                                 <label class="block font-semibold mb-1 text-slate-300">Shopee Affiliate ID</label>
-                                <input type="text" name="shopee_affiliate_id" value="{{ settings.get('shopee_affiliate_id', '') }}" placeholder="1795000000" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                                <input type="text" name="shopee_affiliate_id" value="{{ settings.get('shopee_affiliate_id', '') }}" placeholder="1795000000" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
                             </div>
                             <div>
                                 <label class="block font-semibold mb-1 text-slate-300">TikTok Creator ID</label>
-                                <input type="text" name="tiktok_affiliate_id" value="{{ settings.get('tiktok_affiliate_id', '') }}" placeholder="@temuanharian" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                                <input type="text" name="tiktok_affiliate_id" value="{{ settings.get('tiktok_affiliate_id', '') }}" placeholder="@temuanharian" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
                             </div>
                         </div>
                     </div>
 
                     <!-- Password Admin -->
-                    <div class="pt-4 border-t border-slate-800/80">
+                    <div class="pt-4 border-t border-slate-800">
                         <label class="block font-semibold mb-1 text-slate-300">Ganti Password Kunci Akses Admin</label>
-                        <input type="password" name="admin_secret" placeholder="Biarkan kosong jika tidak ingin mengubah" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                        <input type="password" name="admin_secret" placeholder="Biarkan kosong jika tidak ingin mengubah" class="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
                     </div>
 
-                    <div class="pt-4 border-t border-slate-800/80 flex items-center justify-between">
-                        <label class="flex items-center gap-2 cursor-pointer text-slate-300">
-                            <input type="checkbox" name="auto_approve_scouted" value="1" {% if settings.get('auto_approve_scouted') == '1' %}checked{% endif %} class="rounded bg-slate-900 border-slate-700 text-indigo-600">
+                    <div class="pt-4 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <label class="flex items-center gap-2 cursor-pointer text-slate-300 text-[11px]">
+                            <input type="checkbox" name="auto_approve_scouted" value="1" {% if settings.get('auto_approve_scouted') == '1' %}checked{% endif %} class="rounded bg-slate-950 border-slate-700 text-indigo-600">
                             <span>Otomatis Setujui (Auto-Approve) hasil Auto-Scout</span>
                         </label>
-                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 rounded-xl transition shadow-md">
+                        <button type="submit" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 rounded-xl transition shadow-md shadow-indigo-950">
                             Simpan Seluruh Pengaturan
                         </button>
                     </div>
@@ -612,36 +763,198 @@
 
     </div>
 
+    <!-- ========================================================================= -->
+    <!-- INTERACTIVE DETAIL & CAPTION MODAL (POPUP DIALOG WITH PREVIEW & EDIT) -->
+    <!-- ========================================================================= -->
+    {% for p in products %}
+    <div id="modal-detail-{{ p.item_id }}" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 hidden">
+        <div class="bg-slate-950 border border-slate-800 rounded-3xl max-w-2xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden text-xs">
+            <!-- Modal Header -->
+            <div class="p-4 sm:p-5 border-b border-slate-800/80 flex items-center justify-between gap-3 bg-slate-900/60 flex-shrink-0">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase {% if p.status == 'APPROVED' %}bg-emerald-950 text-emerald-400 border border-emerald-800/60{% elif p.status == 'POSTED' %}bg-blue-950 text-blue-400 border border-blue-800/60{% elif p.status == 'PENDING' %}bg-amber-950 text-amber-400 border border-amber-800/60{% else %}bg-slate-800 text-slate-400{% endif %}">
+                            Status: {{ p.status }}
+                        </span>
+                        <span class="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase {% if p.platform == 'SHOPEE' %}bg-orange-950 text-orange-400 border border-orange-800/60{% elif p.platform == 'TIKTOK' %}bg-rose-950 text-rose-400 border border-rose-800/60{% else %}bg-purple-950 text-purple-400 border border-purple-800/60{% endif %}">
+                            {{ p.platform }}
+                        </span>
+                    </div>
+                    <h3 class="text-sm sm:text-base font-extrabold text-white truncate">{{ p.product_name }}</h3>
+                </div>
+                <button type="button" onclick="closeDetailModal('{{ p.item_id }}')" class="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white transition flex-shrink-0">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <!-- Modal Scrollable Content -->
+            <div class="p-4 sm:p-6 overflow-y-auto space-y-5 flex-grow">
+                <!-- Visual & Metadata Section -->
+                <div class="flex flex-col sm:flex-row gap-4 bg-slate-900/50 p-3.5 sm:p-4 rounded-2xl border border-slate-800/80">
+                    <a href="{{ p.image_url }}" target="_blank" title="Klik untuk membuka gambar penuh" class="flex-shrink-0 mx-auto sm:mx-0">
+                        <img src="{{ p.image_url }}" alt="{{ p.product_name }}" class="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover bg-slate-950 border border-slate-800 shadow-md hover:scale-105 transition">
+                    </a>
+                    <div class="space-y-1.5 flex-grow text-slate-300 text-[11px] min-w-0">
+                        <div class="grid grid-cols-2 gap-2 pb-2 border-b border-slate-800/60">
+                            <div>
+                                <span class="text-slate-500 block text-[10px]">Kategori:</span>
+                                <strong class="text-slate-200">{{ p.category or 'Umum' }}</strong>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block text-[10px]">Harga:</span>
+                                <strong class="text-emerald-400 font-bold">{% if p.price %}Rp{{ "{:,}".format(p.price|int).replace(",", ".") }}{% else %}-{% endif %}</strong>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block text-[10px]">Rating:</span>
+                                <span class="text-amber-400 font-bold">⭐ {{ "%.1f"|format(p.rating) }}</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block text-[10px]">Terjual:</span>
+                                <span class="text-slate-200">{{ p.sales }} unit</span>
+                            </div>
+                        </div>
+                        <div class="pt-1 space-y-1">
+                            <div class="truncate">
+                                <span class="text-slate-500 text-[10px]">Link Shopee:</span>
+                                <a href="{{ p.affiliate_link }}" target="_blank" class="text-indigo-400 hover:underline break-all font-mono text-[10px]">{{ p.affiliate_link }}</a>
+                            </div>
+                            {% if p.tiktok_link %}
+                            <div class="truncate">
+                                <span class="text-slate-500 text-[10px]">Link TikTok:</span>
+                                <a href="{{ p.tiktok_link }}" target="_blank" class="text-rose-400 hover:underline break-all font-mono text-[10px]">{{ p.tiktok_link }}</a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Caption Feed Facebook/Threads/IG -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-bold text-white text-xs flex items-center gap-1.5">
+                            <i data-lucide="file-text" class="w-4 h-4 text-indigo-400"></i>
+                            <span>Caption Feed Edukatif (Gemini AI)</span>
+                        </h4>
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('caption-text-{{ p.item_id }}').innerText); alert('Caption berhasil disalin ke clipboard!')" class="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 flex items-center gap-1 text-[10px] transition border border-slate-800">
+                                <i data-lucide="copy" class="w-3 h-3"></i>
+                                <span>Salin Teks</span>
+                            </button>
+                            <button type="button" onclick="toggleEditCaption('{{ p.item_id }}')" class="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-indigo-400 flex items-center gap-1 text-[10px] transition border border-slate-800">
+                                <i data-lucide="edit-3" class="w-3 h-3"></i>
+                                <span id="btn-edit-text-{{ p.item_id }}">Edit Teks</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- View Mode (Pre-formatted text) -->
+                    <div id="view-caption-{{ p.item_id }}" class="bg-slate-900/90 p-4 rounded-2xl border border-slate-800 text-slate-200 text-xs leading-relaxed whitespace-pre-wrap select-text">
+                        <span id="caption-text-{{ p.item_id }}">{{ p.caption }}</span>
+                    </div>
+
+                    <!-- Inline Edit Mode (Hidden by default) -->
+                    <div id="edit-caption-{{ p.item_id }}" class="hidden space-y-2">
+                        <form action="/admin/update-caption" method="POST">
+                            <input type="hidden" name="item_id" value="{{ p.item_id }}">
+                            <input type="hidden" name="redirect_tab" value="products">
+                            <textarea name="caption" rows="8" class="w-full p-3.5 bg-slate-950 border border-indigo-500/80 rounded-2xl text-white text-xs leading-relaxed outline-none focus:ring-1 focus:ring-indigo-500 font-sans">{{ p.caption }}</textarea>
+                            <div class="flex items-center justify-end gap-2 mt-2">
+                                <button type="button" onclick="toggleEditCaption('{{ p.item_id }}')" class="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs">Batal</button>
+                                <button type="submit" class="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition">Simpan Perubahan</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Section: First Comment Preview -->
+                <div class="space-y-2">
+                    <h4 class="font-bold text-white text-xs flex items-center gap-1.5">
+                        <i data-lucide="message-square" class="w-4 h-4 text-emerald-400"></i>
+                        <span>Komentar Pertama Otomatis (First Comment):</span>
+                    </h4>
+                    <div class="bg-slate-900/90 p-3.5 rounded-2xl border border-slate-800 text-slate-300 text-[11px] leading-relaxed whitespace-pre-wrap select-text">
+                        {{ build_comment(p) }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer Actions Bar -->
+            <div class="p-4 sm:p-5 border-t border-slate-800/80 bg-slate-900/60 flex flex-wrap items-center justify-between gap-2.5 flex-shrink-0">
+                <div class="flex items-center gap-2">
+                    {% if p.status == 'APPROVED' %}
+                    <form action="/admin/action" method="POST" class="inline">
+                        <input type="hidden" name="item_id" value="{{ p.item_id }}">
+                        <input type="hidden" name="action" value="publish_now">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 px-4 rounded-xl transition flex items-center gap-1.5 shadow-md shadow-blue-950">
+                            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                            <span>Posting Sekarang</span>
+                        </button>
+                    </form>
+                    {% elif p.status == 'PENDING' %}
+                    <form action="/admin/action" method="POST" class="inline">
+                        <input type="hidden" name="item_id" value="{{ p.item_id }}">
+                        <input type="hidden" name="action" value="approve">
+                        <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-4 rounded-xl transition flex items-center gap-1.5 shadow-md shadow-emerald-950">
+                            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                            <span>Setujui (Approve)</span>
+                        </button>
+                    </form>
+                    <form action="/admin/action" method="POST" class="inline">
+                        <input type="hidden" name="item_id" value="{{ p.item_id }}">
+                        <input type="hidden" name="action" value="reject">
+                        <button type="submit" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 px-3 rounded-xl transition">
+                            <span>Tolak</span>
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    <form action="/admin/action" method="POST" class="inline" onsubmit="return confirm('Hapus produk ini?')">
+                        <input type="hidden" name="item_id" value="{{ p.item_id }}">
+                        <input type="hidden" name="action" value="delete">
+                        <button type="submit" class="p-2.5 rounded-xl bg-rose-950/40 text-rose-400 hover:bg-rose-900/60 border border-rose-900/40 transition">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </form>
+                </div>
+
+                <button type="button" onclick="closeDetailModal('{{ p.item_id }}')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 px-4 rounded-xl transition">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
     <!-- Quick Add Product Modal with Auto-Scrape Preview & Category Selector -->
-    <div id="modal-quick-add" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-950 border border-slate-800 rounded-3xl p-6 max-w-lg w-full text-xs shadow-2xl max-h-[90vh] overflow-y-auto">
+    <div id="modal-quick-add" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 hidden">
+        <div class="bg-slate-950 border border-slate-800 rounded-3xl p-5 sm:p-6 max-w-lg w-full text-xs shadow-2xl max-h-[92vh] overflow-y-auto">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-sm font-bold text-white flex items-center gap-2">
                     <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-400"></i> Tambah Produk (Semi-Manual / Auto-Preview)
                 </h3>
-                <button onclick="document.getElementById('modal-quick-add').classList.add('hidden')" class="text-slate-400 hover:text-white">
+                <button type="button" onclick="document.getElementById('modal-quick-add').classList.add('hidden')" class="p-1.5 rounded-lg bg-slate-900 text-slate-400 hover:text-white">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
 
             <!-- Auto-Scrape Quick Preview Helper -->
-            <div class="mb-4 p-3 rounded-2xl bg-slate-900 border border-slate-800">
+            <div class="mb-4 p-3.5 rounded-2xl bg-slate-900 border border-slate-800">
                 <label class="block font-semibold mb-1 text-slate-300">Ambil Data & Foto Otomatis dari Link Shopee:</label>
                 <div class="flex items-center gap-2">
-                    <input type="url" id="scrape-url-input" placeholder="Tempel URL produk Shopee (misal: https://shopee.co.id/...)" class="flex-grow px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none focus:border-indigo-500 text-xs">
-                    <button type="button" onclick="autoScrapePreview()" id="btn-scrape" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-2 rounded-xl transition flex items-center gap-1.5 flex-shrink-0">
+                    <input type="url" id="scrape-url-input" placeholder="Tempel URL Shopee (misal: https://s.shopee.co.id/...)" class="flex-grow px-3 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-white outline-none focus:border-indigo-500 text-xs">
+                    <button type="button" onclick="autoScrapePreview()" id="btn-scrape" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 flex-shrink-0">
                         <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
                         <span>Cek Link</span>
                     </button>
                 </div>
-                <span id="scrape-status" class="text-[10px] text-slate-400 mt-1 block">Mengekstrak judul resmi, foto cover, dan kategori yang diizinkan untuk preview.</span>
+                <span id="scrape-status" class="text-[10px] text-slate-400 mt-1.5 block">Mengekstrak judul resmi, foto cover, dan kategori standar Shopee.</span>
             </div>
 
-            <form action="/admin/quick-add" method="POST" class="space-y-3">
-                <div class="grid grid-cols-2 gap-3">
+            <form action="/admin/quick-add" method="POST" class="space-y-3.5">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block font-semibold mb-1 text-slate-300">Platform</label>
-                        <select name="platform" id="input-platform" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                        <select name="platform" id="input-platform" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
                             <option value="SHOPEE">Shopee</option>
                             <option value="TIKTOK">TikTok Shop</option>
                             <option value="BOTH">Keduanya (Shopee + TikTok)</option>
@@ -649,9 +962,8 @@
                     </div>
                     <div>
                         <label class="block font-semibold mb-1 text-slate-300">Kategori (Standar Shopee)</label>
-                        <select name="category" id="input-category" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
-                            {% for cat in categories %}
-                            <option value="{{ cat }}">{{ cat }}</option>
+                        <select name="category" id="input-category" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                            {% for cat in categories %}\n                            <option value="{{ cat }}">{{ cat }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -659,49 +971,49 @@
 
                 <div>
                     <label class="block font-semibold mb-1 text-slate-300">Nama Produk</label>
-                    <input type="text" name="name" id="input-name" required placeholder="Contoh: Lampu Tidur Sensor Otomatis" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                    <input type="text" name="name" id="input-name" required placeholder="Contoh: No Void Minds FORMLOCK Oversized T-Shirt | Cloud" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
                 </div>
 
                 <div>
                     <label class="block font-semibold mb-1 text-slate-300">Link Affiliate Utama (Shopee / TikTok)</label>
-                    <input type="url" name="url" id="input-url" required placeholder="https://s.shopee.co.id/... atau https://vt.tiktok.com/..." class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                    <input type="url" name="url" id="input-url" required placeholder="https://s.shopee.co.id/... atau https://vt.tiktok.com/..." class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
                 </div>
 
                 <div>
                     <label class="block font-semibold mb-1 text-slate-300">Link TikTok Shop (Opsional, jika memilih Keduanya)</label>
-                    <input type="url" name="tiktok_link" placeholder="https://vt.tiktok.com/..." class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                    <input type="url" name="tiktok_link" placeholder="https://vt.tiktok.com/..." class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
                 </div>
 
                 <div>
                     <label class="block font-semibold mb-1 text-slate-300">URL Foto Cover Produk Resmi</label>
-                    <input type="url" name="image_url" id="input-image" required placeholder="https://down-id.img.susercontent.com/... atau URL gambar" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
+                    <input type="url" name="image_url" id="input-image" required placeholder="https://down-id.img.susercontent.com/... atau URL gambar" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500">
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block font-semibold mb-1 text-slate-300">Harga (Rp)</label>
-                        <input type="number" name="price" id="input-price" value="45000" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none">
+                        <input type="number" name="price" id="input-price" value="89000" class="w-full px-3.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none">
                     </div>
                     <div>
                         <label class="block font-semibold mb-1 text-slate-300">Diskon (%)</label>
-                        <input type="number" name="discount" value="15" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none">
+                        <input type="number" name="discount" value="10" class="w-full px-3.5 py-2 bg-slate-900 border border-slate-800 rounded-xl text-white outline-none">
                     </div>
                 </div>
 
-                <div>
+                <div class="p-3 rounded-2xl bg-slate-900/80 border border-slate-800">
                     <label class="flex items-center gap-2 cursor-pointer text-slate-200">
-                        <input type="checkbox" name="use_gemini" value="true" checked class="rounded bg-slate-900 border-slate-700 text-indigo-600">
+                        <input type="checkbox" name="use_gemini" value="true" checked class="rounded bg-slate-950 border-slate-700 text-indigo-600">
                         <span class="font-bold">Gunakan AI Gemini (Caption Edukatif & Faktual)</span>
                     </label>
                     <span class="text-[10px] text-slate-400 block mt-0.5 ml-5">Menyusun teks edukasi fungsi produk riil tanpa hoaks atau klaim berlebihan.</span>
                 </div>
 
-                <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
+                <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
                     <label class="flex items-center gap-1.5 cursor-pointer text-slate-300">
-                        <input type="checkbox" name="auto_approve" value="true" checked class="rounded bg-slate-900 border-slate-700 text-emerald-500">
+                        <input type="checkbox" name="auto_approve" value="true" checked class="rounded bg-slate-950 border-slate-700 text-emerald-500">
                         <span>Langsung Setujui (APPROVED)</span>
                     </label>
-                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl transition">
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2.5 rounded-xl transition shadow-md shadow-emerald-950">
                         Simpan ke Sistem
                     </button>
                 </div>
@@ -712,6 +1024,37 @@
     <!-- Script Section -->
     <script>
         lucide.createIcons();
+
+        function openDetailModal(itemId) {
+            const modal = document.getElementById('modal-detail-' + itemId);
+            if (modal) {
+                modal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeDetailModal(itemId) {
+            const modal = document.getElementById('modal-detail-' + itemId);
+            if (modal) {
+                modal.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            }
+        }
+
+        function toggleEditCaption(itemId) {
+            const viewEl = document.getElementById('view-caption-' + itemId);
+            const editEl = document.getElementById('edit-caption-' + itemId);
+            const btnText = document.getElementById('btn-edit-text-' + itemId);
+            if (editEl.classList.contains('hidden')) {
+                editEl.classList.remove('hidden');
+                viewEl.classList.add('hidden');
+                if (btnText) btnText.innerText = 'Batal Edit';
+            } else {
+                editEl.classList.add('hidden');
+                viewEl.classList.remove('hidden');
+                if (btnText) btnText.innerText = 'Edit Teks';
+            }
+        }
 
         async function autoScrapePreview() {
             const urlInput = document.getElementById('scrape-url-input');
@@ -761,7 +1104,7 @@
                 datasets: [{
                     label: 'Produk Terbit',
                     data: {{ metrics.chart_posted | tojson }},
-                    backgroundColor: 'rgba(99, 102, 241, 0.8)',
+                    backgroundColor: 'rgba(99, 102, 241, 0.85)',
                     borderRadius: 8,
                     borderSkipped: false
                 }]

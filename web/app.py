@@ -40,6 +40,7 @@ app = FastAPI(title="Temuan Harian Control Center (SOLID & DI Architecture)")
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates"
 TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates.env.globals["build_comment"] = build_comment
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
@@ -336,6 +337,20 @@ async def admin_product_action(
         msg = "Aksi tidak dikenali"
 
     return RedirectResponse(url=f"/admin?tab={redirect_tab}&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)
+
+@app.post("/admin/update-caption")
+async def admin_update_caption(
+    request: Request,
+    item_id: str = Form(...),
+    caption: str = Form(...),
+    redirect_tab: str = Form("products"),
+    db: ProductQueueDB = Depends(get_db)
+):
+    if not verify_admin(request, db):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    db.update_caption(item_id, caption.strip())
+    return RedirectResponse(url=f"/admin?tab={redirect_tab}&msg=Caption+berhasil+diperbarui", status_code=status.HTTP_303_SEE_OTHER)
+
 
 
 @app.post("/admin/quick-add")
