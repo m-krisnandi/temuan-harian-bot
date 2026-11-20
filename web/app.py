@@ -456,29 +456,47 @@ async def admin_logout():
 
 # ===================== KONTROL & AKSI PRODUK =====================
 
-def _publish_product_to_channels(db: ProductQueueDB, item: Dict[str, Any]) -> str:
-    """Mempublikasikan produk ke seluruh channel aktif via PublisherDispatcher."""
-    dispatcher = get_publisher_dispatcher(db=db)
-    comment_text = build_comment(item)
-    result = dispatcher.dispatch(
-        image_url=item.get("image_url", ""),
-        caption=item.get("caption", ""),
-        comment_text=comment_text,
-        video_url=item.get("video_url", ""),
-        media_type=item.get("media_type", "IMAGE")
-    )
+# Set in-memory lock untuk mencegah eksekusi duplikat serentak (idempotency guard)
+_PUBLISHING_LOCKS = set()
 
-    if result.is_success:
-        fb_id = result.post_ids.get("Facebook Page")
-        th_id = result.post_ids.get("Threads")
-        ig_id = result.post_ids.get("Instagram")
-        db.mark_posted_multi(item["item_id"], fb_id, th_id, ig_id)
-        db.mark_comment_done(item["item_id"])
-        return result.summary()
-    else:
-        err_msg = result.summary()
-        db.set_error(item["item_id"], err_msg)
-        return f"Gagal publikasi: {err_msg}"
+def _publish_product_to_channels(db: ProductQueueDB, item: Dict[str, Any]) -> str:
+    """Mempublikasikan produk ke seluruh channel aktif via PublisherDispatcher dengan pengaman anti-duplikat."""
+    item_id = str(item["item_id"])
+    
+    # 1. Cek apakah produk sudah berstatus POSTED di database
+    current = db.get(item_id)
+    if current and current.get("status") == "POSTED":
+        return f"Produk {item_id} sudah pernah diposting sebelumnya. Dibatalkan untuk mencegah duplikat."
+
+    # 2. Cek apakah produk sedang dalam proses publish oleh worker/thread lain
+    if item_id in _PUBLISHING_LOCKS:
+        return f"Produk {item_id} sedang diproses. Permintaan duplikat dibatalkan."
+
+    _PUBLISHING_LOCKS.add(item_id)
+    try:
+        dispatcher = get_publisher_dispatcher(db=db)
+        comment_text = build_comment(item)
+        result = dispatcher.dispatch(
+            image_url=item.get("image_url", ""),
+            caption=item.get("caption", ""),
+            comment_text=comment_text,
+            video_url=item.get("video_url", ""),
+            media_type=item.get("media_type", "IMAGE")
+        )
+
+        if result.is_success:
+            fb_id = result.post_ids.get("Facebook Page")
+            th_id = result.post_ids.get("Threads")
+            ig_id = result.post_ids.get("Instagram")
+            db.mark_posted_multi(item_id, fb_id, th_id, ig_id)
+            db.mark_comment_done(item_id)
+            return result.summary()
+        else:
+            err_msg = result.summary()
+            db.set_error(item_id, err_msg)
+            return f"Gagal publikasi: {err_msg}"
+    finally:
+        _PUBLISHING_LOCKS.discard(item_id)
 
 
 @app.post("/admin/action")
