@@ -127,13 +127,13 @@ class ShopeeBulkImporter:
 
         for idx, it in enumerate(raw_items):
             url_to_scrape = it.get("affiliate_link") or it.get("product_url")
-            # 1. Scrape real seller cover & video
-            if url_to_scrape and (not it.get("image_url") or not it.get("product_name")):
+            # 1. Scrape real seller cover & video (Prioritas Mutlak Media Video Penjual)
+            if url_to_scrape and (not it.get("image_url") or not it.get("product_name") or not it.get("video_url")):
                 try:
                     scraped = self.scraper.scrape_preview(url_to_scrape)
                     if not it.get("image_url"):
                         it["image_url"] = scraped.get("image_url", "")
-                    if not it.get("video_url") and scraped.get("video_url"):
+                    if scraped.get("video_url"):
                         it["video_url"] = scraped.get("video_url", "")
                         it["media_type"] = "VIDEO"
                     if not it.get("product_name") or it.get("product_name") == "Produk Shopee Pilihan":

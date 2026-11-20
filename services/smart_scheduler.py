@@ -120,8 +120,14 @@ class SmartScheduler:
             if "market_score" not in it or it["market_score"] == 0:
                 it["market_score"] = MarketRanker.calculate_score(it)
 
-        # 2. Diversifikasi kategori
-        sorted_items = cls.interleave_by_category(items)
+        # 2. Kebijakan Mutlak: Prioritaskan Video di Seluruh Slot Terawal (Video-First Policy)
+        # Pisahkan item video dan gambar; produk video wajib mendahului produk gambar di antrean
+        video_items = [it for it in items if (it.get("media_type") == "VIDEO" or it.get("video_url"))]
+        image_items = [it for it in items if not (it.get("media_type") == "VIDEO" or it.get("video_url"))]
+
+        sorted_videos = cls.interleave_by_category(video_items)
+        sorted_images = cls.interleave_by_category(image_items)
+        sorted_items = sorted_videos + sorted_images
 
         # 3. Tentukan waktu awal (WIB)
         now_wib = datetime.now(WIB)

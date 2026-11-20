@@ -140,10 +140,21 @@ class ShopeePublicScraper(IProductScraper):
                 if m_img:
                     image_url = m_img.group(1).strip()
 
-                # Video Asli Penjual (jika ada)
-                m_vid = re.search(r'property=["\']og:video["\']\s+content=["\'](.*?)["\']', html, re.I)
+                # Video Asli Penjual (jika ada, prioritaskan video dari CDN resmi Shopee)
+                clean_html = html.replace(r'\/', '/')
+                m_vid = re.search(r'property=["\']og:video["\']\s+content=["\'](.*?)["\']', clean_html, re.I)
                 if not m_vid:
-                    m_vid = re.search(r'https://cvf\.shopee\.co\.id/[^\s\"\'<>]+', html)
+                    m_vid = re.search(r'property=["\']og:video:url["\']\s+content=["\'](.*?)["\']', clean_html, re.I)
+                if not m_vid:
+                    m_vid = re.search(r'https://cvf\.shopee\.co\.id/[^\s\"\'<>]+', clean_html)
+                if not m_vid:
+                    m_vid = re.search(r'https://[a-zA-Z0-9_\-\.]*vod\.susercontent\.com/[^\s\"\'<>]+\.(?:mp4|mov)[^\s\"\'<>]*', clean_html, re.I)
+                if not m_vid:
+                    m_vid = re.search(r'https://[a-zA-Z0-9_\-\.]*vod\.susercontent\.com/[^\s\"\'<>]+', clean_html)
+                if not m_vid:
+                    m_vid = re.search(r'\"video_url\"\s*:\s*\"(https:[^\"]+)\"', clean_html)
+                if not m_vid:
+                    m_vid = re.search(r'\"(https://[^\"]+?\.(?:mp4|mov)[^\"]*)\"', clean_html, re.I)
                 if m_vid:
                     video_url = m_vid.group(1) if hasattr(m_vid, 'group') and m_vid.lastindex else m_vid.group(0)
 

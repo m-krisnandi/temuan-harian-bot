@@ -617,7 +617,14 @@
                                 <!-- Kolom 2: Produk & Toko -->
                                 <td class="px-4 py-3.5">
                                     <div class="flex items-center gap-3">
-                                        <img src="{{ p.image_url }}" alt="{{ p.product_name }}" class="w-11 h-11 rounded-xl object-cover bg-slate-950 border border-slate-800 flex-shrink-0 cursor-pointer shadow-sm hover:scale-105 transition" onclick="openDetailModal('{{ p.item_id }}')">
+                                        <div class="relative flex-shrink-0 cursor-pointer" onclick="openDetailModal('{{ p.item_id }}')">
+                                            <img src="{{ p.image_url }}" alt="{{ p.product_name }}" class="w-11 h-11 rounded-xl object-cover bg-slate-950 border border-slate-800 shadow-sm hover:scale-105 transition">
+                                            {% if p.media_type == 'VIDEO' %}
+                                            <span class="absolute -bottom-1 -right-1 p-0.5 rounded-md bg-rose-600 text-white shadow-md" title="Media Video Asli Seller">
+                                                <i data-lucide="video" class="w-2.5 h-2.5"></i>
+                                            </span>
+                                            {% endif %}
+                                        </div>
                                         <div class="max-w-xs">
                                             <a href="javascript:void(0)" onclick="openDetailModal('{{ p.item_id }}')" class="font-bold text-slate-100 hover:text-indigo-400 line-clamp-1 transition">
                                                 {{ p.product_name }}
@@ -1045,9 +1052,18 @@
             <div class="p-4 sm:p-6 overflow-y-auto space-y-5 flex-grow">
                 <!-- Visual & Metadata Section -->
                 <div class="flex flex-col sm:flex-row gap-4 bg-slate-900/50 p-3.5 sm:p-4 rounded-2xl border border-slate-800/80">
-                    <a href="{{ p.image_url }}" target="_blank" title="Klik untuk membuka gambar penuh" class="flex-shrink-0 mx-auto sm:mx-0">
-                        <img src="{{ p.image_url }}" alt="{{ p.product_name }}" class="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover bg-slate-950 border border-slate-800 shadow-md hover:scale-105 transition">
-                    </a>
+                    <div class="flex-shrink-0 mx-auto sm:mx-0 relative">
+                        {% if p.media_type == 'VIDEO' and p.video_url %}
+                        <video src="{{ p.video_url }}" controls poster="{{ p.image_url }}" class="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover bg-slate-950 border border-slate-800 shadow-md"></video>
+                        <span class="absolute top-2 left-2 px-1.5 py-0.5 rounded-md bg-rose-600 text-white text-[9px] font-bold flex items-center gap-1 shadow">
+                            <i data-lucide="video" class="w-2.5 h-2.5"></i> Video Asli
+                        </span>
+                        {% else %}
+                        <a href="{{ p.image_url }}" target="_blank" title="Klik untuk membuka gambar penuh">
+                            <img src="{{ p.image_url }}" alt="{{ p.product_name }}" class="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl object-cover bg-slate-950 border border-slate-800 shadow-md hover:scale-105 transition">
+                        </a>
+                        {% endif %}
+                    </div>
                     <div class="space-y-1.5 flex-grow text-slate-300 text-[11px] min-w-0">
                         <div class="grid grid-cols-2 gap-2 pb-2 border-b border-slate-800/60">
                             <div>

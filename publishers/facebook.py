@@ -75,7 +75,22 @@ class FacebookPagePublisher(ISocialPublisher):
         return str(post_id)
 
     def publish_video(self, video_url: str, caption: str) -> str:
-        """Publikasikan video resmi produk via Graph API."""
+        """Publikasikan video resmi produk via Graph API v27.0.
+        Mencoba unduh video dan unggah langsung sebagai binary source agar tidak diblokir CDN Shopee,
+        dengan fallback ke file_url.
+        """
+        try:
+            vid_resp = self.session.get(video_url, timeout=60, stream=True)
+            if vid_resp.status_code == 200:
+                files = {"source": ("video.mp4", vid_resp.content, "video/mp4")}
+                body = self._post(f"{self.page_id}/videos", {"description": caption}, files=files)
+                post_id = body.get("id")
+                if post_id:
+                    return str(post_id)
+        except Exception:
+            # Fallback ke pengiriman file_url langsung ke Meta
+            pass
+
         body = self._post(f"{self.page_id}/videos", {"file_url": video_url, "description": caption})
         post_id = body.get("id")
         if not post_id:
