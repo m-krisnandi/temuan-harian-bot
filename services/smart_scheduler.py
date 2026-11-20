@@ -57,7 +57,14 @@ class MarketRanker:
         comm_rate = float(item.get("commission_rate", 0.0) or 0.0)
         comm_rate_score = min(20.0, comm_rate * 1.5)
 
-        total_score = round(sales_score + comm_nominal_score + comm_rate_score, 1)
+        # 4. Prioritas Mutlak Media Video (Prioritaskan Video di atas Foto)
+        # Produk dengan video asli seller langsung mendapatkan lonjakan skor prioritas utama
+        media_type = str(item.get("media_type", "IMAGE")).upper()
+        video_url = item.get("video_url", "")
+        has_video = media_type == "VIDEO" or bool(video_url)
+        video_priority_boost = 100.0 if has_video else 0.0
+
+        total_score = round(sales_score + comm_nominal_score + comm_rate_score + video_priority_boost, 1)
         return total_score
 
 
@@ -76,9 +83,15 @@ class SmartScheduler:
             cat = it.get("category", "Lainnya")
             by_cat.setdefault(cat, []).append(it)
 
-        # Urutkan tiap grup berdasarkan market_score tertinggi
+        # Urutkan tiap grup: Prioritas 1 Video Asli Seller, Prioritas 2 Skor Pasar Tertinggi
         for cat in by_cat:
-            by_cat[cat].sort(key=lambda x: x.get("market_score", 0.0), reverse=True)
+            by_cat[cat].sort(
+                key=lambda x: (
+                    1 if (x.get("media_type") == "VIDEO" or x.get("video_url")) else 0,
+                    x.get("market_score", 0.0)
+                ),
+                reverse=True
+            )
 
         # Ambil round-robin bergantian antar kategori
         interleaved: List[Dict[str, Any]] = []
