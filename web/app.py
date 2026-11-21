@@ -64,6 +64,14 @@ async def automated_scheduler_worker():
                 print(f"[SCHEDULER] Menemukan postingan jatuh tempo: {due_product['product_name'][:40]} (Jadwal: {due_product.get('scheduled_at')})")
                 res_msg = _publish_product_to_channels(db, due_product)
                 print(f"[SCHEDULER RESULT] {res_msg}")
+                # Jika token expired atau otorisasi gagal, mundurkan jadwal atau pause agar tidak membanjiri Meta API
+                if "Session has expired" in res_msg or "Error validating access token" in res_msg:
+                    print("[SCHEDULER PAUSED] Token Meta telah kedaluwarsa. Menunda percobaan berikutnya 1 jam untuk mencegah penalti spam.")
+                    db.log_activity("TOKEN_EXPIRED", "Token Facebook Page telah expired. Harap perbarui Access Token di Pengaturan.", status="FAILED")
+                    # Mundurkan scheduled_at produk ini 2 jam agar tidak di-loop setiap 60 detik
+                    next_time = (datetime.now(WIB) + timedelta(hours=2)).strftime("%Y-%m-%d %H:%M")
+                    db.update_schedule(due_product["item_id"], next_time)
+                    await asyncio.sleep(300)  # Istirahatkan worker sejenak
 
             # 2. Auto-Replenish Konten Edukasi Murni setiap 30 siklus (30 menit) atau saat siklus pertama
             if cycle_count % 30 == 0:
