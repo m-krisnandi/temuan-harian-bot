@@ -206,7 +206,7 @@ async def public_catalog(
     with db._connect() as conn:
         conn.row_factory = lambda c, r: dict(zip([col[0] for col in c.description], r))
         cur = conn.cursor()
-        query = "SELECT * FROM products WHERE status = 'POSTED'"
+        query = "SELECT * FROM products WHERE status = 'POSTED' AND affiliate_link != '' AND (post_type != 'EDUCATION' OR post_type IS NULL)"
         params = []
 
         if q:
@@ -230,7 +230,7 @@ async def public_catalog(
         name="index.html",
         context={
             "request": request,
-            "items": items,
+            "products": items, "items": items,
             "search_query": q or "",
             "active_platform": platform or "ALL",
             "active_category": category or "ALL",
