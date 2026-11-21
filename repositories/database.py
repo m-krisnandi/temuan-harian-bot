@@ -393,7 +393,9 @@ class ProductRepository(IProductRepository):
 class ProductQueueDB:
     """Facade / Unit of Work yang menggabungkan seluruh repositori."""
 
-    def __init__(self, db_path: str = "temuan_harian.db"):
+    def __init__(self, db_path: Optional[str] = None):
+        self.db_path = db_path or os.getenv("TEMUAN_DB", "temuan_harian.db")
+        db_path = self.db_path
         self.db_path = db_path
         self._conn_factory = ConnectionFactory(db_path)
         self._init_tables()
