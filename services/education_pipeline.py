@@ -189,7 +189,7 @@ class EducationContentService:
             "post_type": "EDUCATION"
         }
 
-        self.db.insert(item_data)
+        self.db.insert_product(item_data)
         self.db.update_schedule(item_id, scheduled_at)
         self.db.update_post_type(item_id, "EDUCATION")
 
