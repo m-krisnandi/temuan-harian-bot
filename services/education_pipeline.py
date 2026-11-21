@@ -136,7 +136,7 @@ Ingat: Dilarang pembuka klise ('Pernah nggak sih'), dilarang penutup klise, dila
 def fetch_educational_visual(query: str, db=None) -> str:
     """Mengambil stok foto fotografer manusia bebas AI dari Unsplash/Pexels."""
     stock = get_stock_service(db=db)
-    photos = stock.search(query, per_page=5)
+    photos = stock.search(query, db=db)
     if photos:
         return photos[0]["url"]
     return "https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=1080&q=80"

@@ -91,3 +91,8 @@ class StockPhotoService:
             results.extend(cls.search_pexels(query, pexels_key, per_page=6))
 
         return results
+
+
+def get_stock_service(db: Any = None) -> StockPhotoService:
+    """Factory helper function untuk mendapatkan instance / kelas StockPhotoService."""
+    return StockPhotoService
