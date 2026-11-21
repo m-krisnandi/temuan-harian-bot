@@ -263,6 +263,11 @@ class ProductRepository(IProductRepository):
     def update_caption(self, item_id: str, caption: str) -> None:
         self._conn.execute("UPDATE products SET caption = ? WHERE item_id = ?", (caption, str(item_id)))
 
+    def update_image(self, item_id: str, image_url: str) -> None:
+        self._conn.execute("UPDATE products SET image_url = ? WHERE item_id = ?", (image_url.strip(), str(item_id)))
+        if self._logger:
+            self._logger.log("UPDATE_IMAGE", f"Perbarui foto cover ID {item_id}: {image_url[:40]}")
+
     def update_post_type(self, item_id: str, post_type: str) -> None:
         self._conn.execute(
             "UPDATE products SET post_type = ? WHERE item_id = ?",
@@ -602,6 +607,9 @@ class ProductQueueDB:
 
     def update_caption(self, item_id: str, caption: str) -> None:
         self.product_repo.update_caption(item_id, caption)
+
+    def update_image(self, item_id: str, image_url: str) -> None:
+        self.product_repo.update_image(item_id, image_url)
 
     def mark_posted(self, item_id: str, post_id: str) -> None:
         self.product_repo.mark_posted_multi(item_id, fb_post_id=post_id)

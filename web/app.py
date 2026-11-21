@@ -511,6 +511,7 @@ async def admin_action(
     item_id: str = Form(...),
     action: str = Form(...),
     reason: Optional[str] = Form(""),
+    image_url: Optional[str] = Form(None),
     redirect_tab: str = Form("products"),
     db: ProductQueueDB = Depends(get_db)
 ):
@@ -526,6 +527,12 @@ async def admin_action(
     elif action == "delete":
         db.delete(item_id)
         msg = f"Produk {item_id} berhasil dihapus dari database"
+    elif action == "update_image":
+        if image_url and image_url.strip():
+            db.update_image(item_id, image_url.strip())
+            msg = "Foto cover berhasil diganti dengan foto stok komersial bebas AI!"
+        else:
+            msg = "URL foto tidak boleh kosong"
     elif action == "toggle_post_type":
         item = db.get(item_id)
         current_type = item.get("post_type", "AFFILIATE") if item else "AFFILIATE"
@@ -886,6 +893,19 @@ async def trigger_retry_comments(request: Request, db: ProductQueueDB = Depends(
             success += 1
 
     return RedirectResponse(url=f"/admin?tab=logs&msg={success}+komentar+berhasil+diposting", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.get("/api/stock-photos/search")
+async def api_search_stock_photos(
+    request: Request,
+    q: str,
+    db: ProductQueueDB = Depends(get_db)
+):
+    if not verify_admin(request, db):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    from services.stock_photos import StockPhotoService
+    photos = StockPhotoService.search(q, db=db)
+    return {"query": q, "results": photos}
 
 
 @app.post("/admin/settings")
