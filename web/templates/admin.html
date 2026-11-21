@@ -437,10 +437,26 @@
                                                 {{ p.time_slot or p.scheduled_at }} WIB
                                             </span>
                                         </div>
-                                        <!-- Monospace Countdown Badge -->
-                                        <div class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-xl bg-slate-950 border border-slate-800 text-[10px] font-mono text-indigo-300 font-bold">
-                                            <i data-lucide="timer" class="w-2.5 h-2.5 text-indigo-400"></i>
-                                            <span class="live-countdown" data-scheduled="{{ p.scheduled_at }}">...</span>
+                                        <div class="flex items-center gap-1.5">
+                                            <!-- Toggle Tipe Postingan (Edukasi Murni vs Afiliasi) -->
+                                            <form action="/admin/action" method="POST" class="inline">
+                                                <input type="hidden" name="item_id" value="{{ p.item_id }}">
+                                                <input type="hidden" name="action" value="toggle_post_type">
+                                                {% if p.post_type == 'EDUCATION' %}
+                                                <button type="submit" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-950/80 border border-emerald-800 text-[10px] text-emerald-300 font-bold hover:bg-emerald-900 transition" title="Klik untuk ubah ke Rekomendasi Afiliasi">
+                                                    <i data-lucide="book-open" class="w-2.5 h-2.5 text-emerald-400"></i> Edukasi Murni
+                                                </button>
+                                                {% else %}
+                                                <button type="submit" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-950/80 border border-indigo-800 text-[10px] text-indigo-300 font-bold hover:bg-indigo-900 transition" title="Klik untuk ubah ke Edukasi Murni Bebas Link">
+                                                    <i data-lucide="shopping-bag" class="w-2.5 h-2.5 text-indigo-400"></i> Rekomendasi Link
+                                                </button>
+                                                {% endif %}
+                                            </form>
+                                            <!-- Monospace Countdown Badge -->
+                                            <div class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-xl bg-slate-950 border border-slate-800 text-[10px] font-mono text-indigo-300 font-bold">
+                                                <i data-lucide="timer" class="w-2.5 h-2.5 text-indigo-400"></i>
+                                                <span class="live-countdown" data-scheduled="{{ p.scheduled_at }}">...</span>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -606,9 +622,24 @@
                                             </span>
                                         </div>
                                         {% if p.scheduled_at and p.status == 'APPROVED' %}
-                                        <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-950 border border-slate-800 text-[10px] font-mono text-indigo-300 font-bold">
-                                            <i data-lucide="timer" class="w-2.5 h-2.5 text-indigo-400"></i>
-                                            <span class="live-countdown" data-scheduled="{{ p.scheduled_at }}">Memuat...</span>
+                                        <div class="flex items-center gap-1.5 mt-1">
+                                            <form action="/admin/action" method="POST" class="inline">
+                                                <input type="hidden" name="item_id" value="{{ p.item_id }}">
+                                                <input type="hidden" name="action" value="toggle_post_type">
+                                                {% if p.post_type == 'EDUCATION' %}
+                                                <button type="submit" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-950/80 border border-emerald-800 text-[9px] text-emerald-300 font-bold hover:bg-emerald-900 transition" title="Klik untuk ubah ke Rekomendasi Afiliasi">
+                                                    <i data-lucide="book-open" class="w-2 h-2 text-emerald-400"></i> Edukasi
+                                                </button>
+                                                {% else %}
+                                                <button type="submit" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-950/80 border border-indigo-800 text-[9px] text-indigo-300 font-bold hover:bg-indigo-900 transition" title="Klik untuk ubah ke Edukasi Murni">
+                                                    <i data-lucide="shopping-bag" class="w-2 h-2 text-indigo-400"></i> Afiliasi
+                                                </button>
+                                                {% endif %}
+                                            </form>
+                                            <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-slate-950 border border-slate-800 text-[10px] font-mono text-indigo-300 font-bold">
+                                                <i data-lucide="timer" class="w-2.5 h-2.5 text-indigo-400"></i>
+                                                <span class="live-countdown" data-scheduled="{{ p.scheduled_at }}">Memuat...</span>
+                                            </div>
                                         </div>
                                         {% endif %}
                                     </div>

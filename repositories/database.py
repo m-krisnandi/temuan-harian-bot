@@ -202,8 +202,8 @@ class ProductRepository(IProductRepository):
                 item_id, product_name, product_url, affiliate_link, image_url,
                 price, discount_rate, rating, sales, commission_rate, caption,
                 category, status, platform, tiktok_link, scheduled_at,
-                media_type, video_url, market_score, commission_amount, shop_name, rejection_reason, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                media_type, video_url, market_score, commission_amount, shop_name, rejection_reason, post_type, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 str(item["item_id"]),
@@ -228,6 +228,7 @@ class ProductRepository(IProductRepository):
                 float(item.get("commission_amount", 0.0) or 0.0),
                 item.get("shop_name", ""),
                 rejection_reason,
+                item.get("post_type", "AFFILIATE"),
                 _now(),
             ),
         )
@@ -261,6 +262,14 @@ class ProductRepository(IProductRepository):
 
     def update_caption(self, item_id: str, caption: str) -> None:
         self._conn.execute("UPDATE products SET caption = ? WHERE item_id = ?", (caption, str(item_id)))
+
+    def update_post_type(self, item_id: str, post_type: str) -> None:
+        self._conn.execute(
+            "UPDATE products SET post_type = ? WHERE item_id = ?",
+            (post_type, str(item_id))
+        )
+        if self._logger:
+            self._logger.log("POST_TYPE", f"Ubah tipe postingan ID {item_id}: {post_type}")
 
     def update_schedule(self, item_id: str, scheduled_at: str) -> None:
         self._conn.execute(
@@ -438,6 +447,7 @@ class ProductQueueDB:
                     ("commission_amount", "REAL DEFAULT 0.0"),
                     ("shop_name", "TEXT DEFAULT ''"),
                     ("rejection_reason", "TEXT DEFAULT ''"),
+                    ("post_type", "TEXT DEFAULT 'AFFILIATE'"),
                 ]
                 for col, col_def in columns_to_add:
                     try:
@@ -565,6 +575,9 @@ class ProductQueueDB:
 
     def list_scheduled(self, limit: int = 50) -> List[Dict[str, Any]]:
         return self.product_repo.list_scheduled(limit)
+
+    def update_post_type(self, item_id: str, post_type: str) -> None:
+        self.product_repo.update_post_type(item_id, post_type)
 
     def update_schedule(self, item_id: str, scheduled_at: str) -> None:
         self.product_repo.update_schedule(item_id, scheduled_at)

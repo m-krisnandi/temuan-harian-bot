@@ -164,6 +164,15 @@ class SmartScheduler:
             )
             it["scheduled_at"] = post_time.strftime("%Y-%m-%d %H:%M")
             it["status"] = "APPROVED"  # Siap terbit otomatis saat jamnya tiba
+
+            # Rotasi Cerdas Postingan (Smart Content Mix):
+            # Slot Pagi (07:30) & Sore (17:00) = Edukasi Murni tanpa link (0% jualan)
+            # Slot Siang (12:15) & Malam (20:00) = Rekomendasi Afiliasi dengan link Shopee
+            if hour in (7, 17):
+                it["post_type"] = it.get("post_type") or "EDUCATION"
+            else:
+                it["post_type"] = it.get("post_type") or "AFFILIATE"
+
             scheduled_items.append(it)
 
             # Maju ke slot berikutnya

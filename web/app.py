@@ -475,7 +475,13 @@ def _publish_product_to_channels(db: ProductQueueDB, item: Dict[str, Any]) -> st
     _PUBLISHING_LOCKS.add(item_id)
     try:
         dispatcher = get_publisher_dispatcher(db=db)
-        comment_text = build_comment(item)
+        post_type = item.get("post_type", "AFFILIATE")
+        # Edukasi murni tanpa link promosi; hanya postingan AFFILIATE yang menyertakan link Shopee
+        if post_type == "EDUCATION":
+            comment_text = None
+        else:
+            comment_text = build_comment(item)
+
         result = dispatcher.dispatch(
             image_url=item.get("image_url", ""),
             caption=item.get("caption", ""),
@@ -520,6 +526,13 @@ async def admin_action(
     elif action == "delete":
         db.delete(item_id)
         msg = f"Produk {item_id} berhasil dihapus dari database"
+    elif action == "toggle_post_type":
+        item = db.get(item_id)
+        current_type = item.get("post_type", "AFFILIATE") if item else "AFFILIATE"
+        new_type = "EDUCATION" if current_type == "AFFILIATE" else "AFFILIATE"
+        db.update_post_type(item_id, new_type)
+        label = "Edukasi Murni (Bebas Link)" if new_type == "EDUCATION" else "Rekomendasi Afiliasi (Ada Link)"
+        msg = f"Tipe postingan diubah menjadi: {label}"
     elif action == "publish_now":
         item = db.get(item_id)
         if not item:
@@ -651,6 +664,7 @@ async def admin_single_link_import(
         "category": scraped.get("category", "Rumah Tangga & Dekorasi"),
         "platform": "SHOPEE",
         "status": "APPROVED" if auto_approve else "PENDING",
+        "post_type": "AFFILIATE",
         "rejection_reason": "",
         "caption": ""
     }
