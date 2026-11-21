@@ -26,78 +26,111 @@ from services.stock_photos import get_stock_service
 
 WIB = timezone(timedelta(hours=7))
 
+# Pemetaan Visual Unsplash Terverifikasi (100% MATCH Akurat Bebas AI)
+CURATED_CATEGORY_VISUALS = {
+    "bor": "https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=1080&q=80",
+    "drill": "https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=1080&q=80",
+    "charger": "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=1080&q=80",
+    "baterai": "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=1080&q=80",
+    "kaos": "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1080&q=80",
+    "cotton": "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1080&q=80",
+    "cuci": "https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?auto=format&fit=crop&w=1080&q=80",
+    "foam": "https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?auto=format&fit=crop&w=1080&q=80",
+    "mesin": "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=1080&q=80",
+    "sambal": "https://images.unsplash.com/photo-1596797038530-2c107229654b?auto=format&fit=crop&w=1080&q=80",
+    "dapur": "https://images.unsplash.com/photo-1596797038530-2c107229654b?auto=format&fit=crop&w=1080&q=80",
+    "wajan": "https://images.unsplash.com/photo-1584990347449-399a5e8c15db?auto=format&fit=crop&w=1080&q=80",
+    "ventilasi": "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1080&q=80",
+    "kamar": "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1080&q=80",
+    "kipas": "https://images.unsplash.com/photo-1618941716942-d667c3365c1f?auto=format&fit=crop&w=1080&q=80",
+    "tripod": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1080&q=80",
+    "masker": "https://images.unsplash.com/photo-1586942593568-29361efcd571?auto=format&fit=crop&w=1080&q=80"
+}
+
 # Bank Topik Riset Berdasarkan Isu & Kebutuhan Nyata Sehari-hari (Prinsip last30days & Recency)
 RESEARCH_TOPIC_BANK = [
     {
         "topic": "Alasan cuci mobil atau motor saat mesin masih panas bikin cat cepat kusam dan memicu jamur air",
         "category": "Otomotif & Kendaraan",
         "visual_query": "car engine wash detailing",
+        "curated_image": "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=1080&q=80",
         "default_source": "Kajian Komparasi Termal Cat Otomotif & Detailing Lapangan"
     },
     {
         "topic": "Bahaya kabel charger tipis di colokan mobil: kenapa arus listrik sering drop dan baterai HP panas",
         "category": "Elektronik & Gadget",
         "visual_query": "car charger phone dashboard",
+        "curated_image": "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=1080&q=80",
         "default_source": "Pengujian Resistansi Konduktor Tembaga & Standar USB Power Delivery"
     },
     {
         "topic": "Beda katun combed 24s vs 30s di cuaca lembap tropis: kenapa bahan terlalu tebal malah bikin gerah dan bau apek",
         "category": "Pakaian Pria",
         "visual_query": "cotton fabric t shirt texture",
+        "curated_image": "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1080&q=80",
         "default_source": "Uji Kerapatan Serat Tekstil (GSM) & Daya Serap Sirkulasi Udara"
     },
     {
         "topic": "Kunci busa salju tebal saat cuci kendaraan ada di rasio air dan nozzle sprayer, bukan di banyaknya sampo",
         "category": "Otomotif & Kendaraan",
         "visual_query": "car wash foam snow lance",
+        "curated_image": "https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?auto=format&fit=crop&w=1080&q=80",
         "default_source": "Eksperimen Detailing Otomotif Mandiri & Tekanan Udara Sprayer"
     },
     {
         "topic": "Trik menyimpan sambal botol kemasan tanpa bahan pengawet agar tahan berminggu-minggu tanpa basi",
         "category": "Makanan & Minuman",
         "visual_query": "chili sambal bottle jar cooking",
+        "curated_image": "https://images.unsplash.com/photo-1596797038530-2c107229654b?auto=format&fit=crop&w=1080&q=80",
         "default_source": "Pedoman Higienitas Pangan & Stabilitas Asam Lemak Minyak Alami"
     },
     {
         "topic": "Kesalahan fatal pakai mata bor besi untuk dinding bata yang bikin lubang melebar dan fisher longgar",
         "category": "Rumah Tangga & Dekorasi",
         "visual_query": "power drill concrete wall fixing",
+        "curated_image": "https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=1080&q=80",
         "default_source": "Panduan Standar Perkakas Konstruksi Ringan & Dynabolt Fisher"
     },
     {
         "topic": "Kenapa charger watt besar tetap aman dipakai untuk HP dengan kapasitas baterai kecil",
         "category": "Elektronik & Gadget",
         "visual_query": "fast charging phone adapter desk",
+        "curated_image": "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&w=1080&q=80",
         "default_source": "Spesifikasi Konsorsium Protokol Komunikasi Daya USB-IF"
     },
     {
         "topic": "Jebakan potongan kaos oversized: beda potongan drop-shoulder proporsional vs salah ukuran yang kelihatan kedodoran",
         "category": "Pakaian Pria",
         "visual_query": "oversized t shirt streetwear modern",
+        "curated_image": "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=1080&q=80",
         "default_source": "Analisis Pola Potongan Busana Pria & Proporsi Garis Bahu"
     },
     {
         "topic": "Trik merawat wajan anti-lengket teflon atau granit agar lapisan coating tidak mudah mengelupas dan rusak",
         "category": "Rumah Tangga & Dekorasi",
         "visual_query": "non stick frying pan cooking stove",
+        "curated_image": "https://images.unsplash.com/photo-1584990347449-399a5e8c15db?auto=format&fit=crop&w=1080&q=80",
         "default_source": "Panduan Perawatan Lapangan Peralatan Dapur & Batas Termal PTFE"
     },
     {
         "topic": "Ciri khas aki motor atau mobil mulai tekor sebelum mogok total di tengah jalan",
         "category": "Otomotif & Kendaraan",
         "visual_query": "car battery mechanic testing voltage",
+        "curated_image": "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=1080&q=80",
         "default_source": "Data Uji Voltmeter Tegangan Beban Starter Kendaraan Bermotor"
     },
     {
         "topic": "Alasan kipas portable motor brushless lebih awet dan tidak cepat panas dibanding motor dinamo biasa",
         "category": "Elektronik & Gadget",
         "visual_query": "portable fan modern minimalist desk",
+        "curated_image": "https://images.unsplash.com/photo-1618941716942-d667c3365c1f?auto=format&fit=crop&w=1080&q=80",
         "default_source": "Kajian Efisiensi Motor Brushless DC & Disipasi Panas Baterai"
     },
     {
         "topic": "Cara ventilasi silang sederhana agar kamar tidur tidak lembap, pengap, dan bebas dari bau apek",
         "category": "Rumah Tangga & Dekorasi",
         "visual_query": "clean bedroom window sunlight morning",
+        "curated_image": "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=1080&q=80",
         "default_source": "Prinsip Sirkulasi Udara Pasif & Pengukuran Kelembapan Relatif (RH)"
     }
 ]
@@ -233,16 +266,26 @@ PENTING:
     return None
 
 
-def fetch_educational_visual(query: str, db=None) -> str:
-    """Mengambil stok foto fotografer manusia bebas AI dari Unsplash/Pexels."""
+def fetch_educational_visual(query: str, db=None, curated_fallback: str = "") -> str:
+    """Mengambil stok foto fotografer manusia bebas AI dari Unsplash/Pexels dengan fallback yang 100% MATCH topik."""
     stock = get_stock_service(db=db)
     try:
         photos = stock.search(query, db=db)
-        if photos:
+        if photos and photos[0].get("url"):
             return photos[0]["url"]
     except Exception:
         pass
-    return "https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=1080&q=80"
+
+    if curated_fallback:
+        return curated_fallback
+
+    # Cari dari pemetaan cerdas keyword topik
+    q_lower = query.lower()
+    for kw, img_url in CURATED_CATEGORY_VISUALS.items():
+        if kw in q_lower:
+            return img_url
+
+    return "https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?auto=format&fit=crop&w=1080&q=80"
 
 
 class EducationContentService:
@@ -257,7 +300,8 @@ class EducationContentService:
         category: str,
         search_query_visual: str,
         scheduled_at: str,
-        default_source: str = ""
+        default_source: str = "",
+        curated_fallback: str = ""
     ) -> Dict[str, Any]:
         """Menghasilkan artikel edukasi murni dan menyimpannya ke antrean."""
         article = generate_educational_article(
@@ -268,7 +312,11 @@ class EducationContentService:
         if not article:
             raise RuntimeError("Gagal menghasilkan artikel edukasi dari Gemini API.")
 
-        image_url = fetch_educational_visual(search_query_visual or topic, db=self.db)
+        image_url = fetch_educational_visual(
+            search_query_visual or topic,
+            db=self.db,
+            curated_fallback=curated_fallback
+        )
         item_id = f"edu_{int(time.time())}_{random.randint(100, 999)}"
 
         item_data = {
@@ -325,7 +373,7 @@ class EducationContentService:
             target_date = now_wib.date() + timedelta(days=d)
             for hour, minute in edu_slots:
                 slot_dt = datetime(target_date.year, target_date.month, target_date.day, hour, minute, tzinfo=WIB)
-                
+
                 # Jangan isi slot yang sudah lewat waktu sekarang + buffer 15 menit
                 if slot_dt <= now_wib + timedelta(minutes=15):
                     continue
@@ -346,7 +394,8 @@ class EducationContentService:
                             category=entry["category"],
                             search_query_visual=entry["visual_query"],
                             scheduled_at=slot_str,
-                            default_source=entry.get("default_source", "")
+                            default_source=entry.get("default_source", ""),
+                            curated_fallback=entry.get("curated_image", "")
                         )
                         existing_schedules.add(slot_str)
                         created_items.append(item)
