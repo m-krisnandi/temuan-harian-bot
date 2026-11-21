@@ -319,7 +319,7 @@ class ProductRepository(IProductRepository):
         threads_post_id: Optional[str] = None,
         ig_post_id: Optional[str] = None
     ) -> None:
-        updates = ["status = 'POSTED'", "posted_at = ?", "last_error = NULL"]
+        updates = ["status = 'POSTED'", "posted_at = ?", "last_error = NULL", "retry_count = 0"]
         params: List[Any] = [_now()]
         channels = []
 
@@ -359,6 +359,43 @@ class ProductRepository(IProductRepository):
         )
         if self._logger:
             self._logger.log("ERROR", f"Error pada produk {item_id}: {message[:100]}", status="FAILED")
+
+    def handle_publish_failure(
+        self,
+        item_id: str,
+        error_message: str,
+        is_auth_or_spam_error: bool = False
+    ) -> Dict[str, Any]:
+        """Menangani kegagalan publikasi dengan mekanisme backoff dan isolasi antrean (Anti-Loop)."""
+        row = self.get(item_id)
+        current_retries = int(row.get("retry_count", 0)) if row and row.get("retry_count") is not None else 0
+        new_retries = current_retries + 1
+
+        # Jika error otorisasi/token/spam, mundurkan jadwal 2 jam untuk cegah penalti API
+        if is_auth_or_spam_error:
+            next_time = (datetime.now(WIB) + timedelta(hours=2)).strftime("%Y-%m-%d %H:%M")
+            self._conn.execute(
+                "UPDATE products SET retry_count = ?, last_error = ?, scheduled_at = ? WHERE item_id = ?",
+                (new_retries, error_message[:500], next_time, str(item_id))
+            )
+            return {"action": "PAUSE_CIRCUIT", "retries": new_retries, "next_time": next_time}
+
+        # Jika sudah gagal 3x berturut-turut, isolasi status ke REJECTED agar tidak menyumbat antrean
+        if new_retries >= 3:
+            self._conn.execute(
+                "UPDATE products SET status = ?, scheduled_at = '', retry_count = ?, last_error = ?, rejection_reason = ? WHERE item_id = ?",
+                (REJECTED, new_retries, error_message[:500], f"Gagal posting setelah 3x percobaan: {error_message[:200]}", str(item_id))
+            )
+            return {"action": "EXHAUSTED", "retries": new_retries}
+
+        # Backoff bertahap: Percobaan 1 -> +20 menit, Percobaan 2 -> +60 menit
+        delay_minutes = 20 if new_retries == 1 else 60
+        next_time = (datetime.now(WIB) + timedelta(minutes=delay_minutes)).strftime("%Y-%m-%d %H:%M")
+        self._conn.execute(
+            "UPDATE products SET retry_count = ?, last_error = ?, scheduled_at = ? WHERE item_id = ?",
+            (new_retries, error_message[:500], next_time, str(item_id))
+        )
+        return {"action": "BACKOFF", "retries": new_retries, "next_time": next_time}
 
     def list_pending(self, limit: int = 50) -> List[Dict[str, Any]]:
         return self._conn.query(
@@ -456,6 +493,7 @@ class ProductQueueDB:
                     ("shop_name", "TEXT DEFAULT ''"),
                     ("rejection_reason", "TEXT DEFAULT ''"),
                     ("post_type", "TEXT DEFAULT 'AFFILIATE'"),
+                    ("retry_count", "INTEGER DEFAULT 0"),
                 ]
                 for col, col_def in columns_to_add:
                     try:
@@ -631,6 +669,14 @@ class ProductQueueDB:
 
     def set_error(self, item_id: str, message: str) -> None:
         self.product_repo.set_error(item_id, message)
+
+    def handle_publish_failure(
+        self,
+        item_id: str,
+        error_message: str,
+        is_auth_or_spam_error: bool = False
+    ) -> Dict[str, Any]:
+        return self.product_repo.handle_publish_failure(item_id, error_message, is_auth_or_spam_error)
 
     # ---- Metrik & Chart Data ----
     def get_metrics(self) -> Dict[str, Any]:

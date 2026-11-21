@@ -48,30 +48,77 @@ from services.education_pipeline import EducationContentService
 
 # ===================== BACKGROUND SCHEDULER WORKER =====================
 
+_META_CIRCUIT_BREAKER_UNTIL: Optional[datetime] = None
+
+AUTH_SPAM_SIGNALS = [
+    "session has expired",
+    "error validating access token",
+    "oauthexception",
+    "permissions error",
+    "checkpoint",
+    "temporarily blocked",
+    "rate limit",
+    "calls have exceeded",
+    "user is restricted",
+    "integrity",
+    "spam"
+]
+
 async def automated_scheduler_worker():
     """Background worker yang memeriksa antrean setiap 60 detik.
-    1. Mempublikasikan produk/konten yang jadwalnya sudah tiba.
+    1. Mempublikasikan produk/konten yang jadwalnya sudah tiba dengan proteksi Anti-Loop & Circuit Breaker.
     2. Secara otomatis mengisi slot edukasi murni (07:30 & 17:00 WIB) untuk 3 hari ke depan via 5-Stage Content Engine.
     """
+    global _META_CIRCUIT_BREAKER_UNTIL
     print("[SCHEDULER] Background worker aktif memantau antrean & auto-replenish edukasi (Asia/Jakarta)...")
     cycle_count = 0
     while True:
         try:
             db = get_db()
-            # 1. Cek produk jatuh tempo
-            due_product = db.get_due_scheduled()
-            if due_product:
-                print(f"[SCHEDULER] Menemukan postingan jatuh tempo: {due_product['product_name'][:40]} (Jadwal: {due_product.get('scheduled_at')})")
-                res_msg = _publish_product_to_channels(db, due_product)
-                print(f"[SCHEDULER RESULT] {res_msg}")
-                # Jika token expired atau otorisasi gagal, mundurkan jadwal atau pause agar tidak membanjiri Meta API
-                if "Session has expired" in res_msg or "Error validating access token" in res_msg:
-                    print("[SCHEDULER PAUSED] Token Meta telah kedaluwarsa. Menunda percobaan berikutnya 1 jam untuk mencegah penalti spam.")
-                    db.log_activity("TOKEN_EXPIRED", "Token Facebook Page telah expired. Harap perbarui Access Token di Pengaturan.", status="FAILED")
-                    # Mundurkan scheduled_at produk ini 2 jam agar tidak di-loop setiap 60 detik
-                    next_time = (datetime.now(WIB) + timedelta(hours=2)).strftime("%Y-%m-%d %H:%M")
-                    db.update_schedule(due_product["item_id"], next_time)
-                    await asyncio.sleep(300)  # Istirahatkan worker sejenak
+            now_dt = datetime.now(WIB)
+
+            # Cek Proteksi Circuit Breaker
+            if _META_CIRCUIT_BREAKER_UNTIL and now_dt < _META_CIRCUIT_BREAKER_UNTIL:
+                wait_min = max(1, int((_META_CIRCUIT_BREAKER_UNTIL - now_dt).total_seconds() / 60))
+                if cycle_count % 10 == 0:
+                    print(f"[CIRCUIT BREAKER AKTIF] Penundaan request aktif hingga {_META_CIRCUIT_BREAKER_UNTIL.strftime('%H:%M WIB')} (~{wait_min} menit) untuk melindungi akun Meta.")
+            else:
+                if _META_CIRCUIT_BREAKER_UNTIL:
+                    print("[CIRCUIT BREAKER SELESAI] Masa pendinginan selesai. Melanjutkan jadwal normal...")
+                    _META_CIRCUIT_BREAKER_UNTIL = None
+
+                # 1. Cek produk jatuh tempo
+                due_product = db.get_due_scheduled()
+                if due_product:
+                    print(f"[SCHEDULER] Menemukan postingan jatuh tempo: {due_product['product_name'][:40]} (Jadwal: {due_product.get('scheduled_at')})")
+                    res_msg = _publish_product_to_channels(db, due_product)
+                    print(f"[SCHEDULER RESULT] {res_msg}")
+
+                    # Jika gagal publikasi, jalankan mekanisme Anti-Loop & Circuit Breaker
+                    if "Gagal publikasi" in res_msg:
+                        is_auth_spam = any(sig in res_msg.lower() for sig in AUTH_SPAM_SIGNALS)
+                        fail_res = db.handle_publish_failure(
+                            item_id=due_product["item_id"],
+                            error_message=res_msg,
+                            is_auth_or_spam_error=is_auth_spam
+                        )
+                        if is_auth_spam:
+                            _META_CIRCUIT_BREAKER_UNTIL = now_dt + timedelta(hours=1)
+                            db.log_activity(
+                                "CIRCUIT_BREAKER",
+                                f"Token/Otorisasi Meta bermasalah: {res_msg[:120]}. Scheduler diistirahatkan 1 jam untuk mencegah penalti.",
+                                status="FAILED"
+                            )
+                            print(f"[CIRCUIT BREAKER DIAKTIFKAN] Diistirahatkan hingga {_META_CIRCUIT_BREAKER_UNTIL.strftime('%H:%M WIB')}.")
+                        elif fail_res.get("action") == "EXHAUSTED":
+                            db.log_activity(
+                                "RETRY_EXHAUSTED",
+                                f"Produk {due_product['item_id']} gagal 3x dan diisolasi dari antrean: {res_msg[:100]}",
+                                status="FAILED"
+                            )
+                            print(f"[ANTI-LOOP] Produk {due_product['item_id']} gagal 3x berturut-turut, diisolasi dari antrean.")
+                        else:
+                            print(f"[ANTI-LOOP] Jadwal produk diundur ke {fail_res.get('next_time')} (Percobaan ke-{fail_res.get('retries')}).")
 
             # 2. Auto-Replenish Konten Edukasi Murni setiap 30 siklus (30 menit) atau saat siklus pertama
             if cycle_count % 30 == 0:
@@ -984,6 +1031,8 @@ async def api_search_stock_photos(
 
 @app.post("/admin/settings")
 async def update_settings(request: Request, db: ProductQueueDB = Depends(get_db)):
+    global _META_CIRCUIT_BREAKER_UNTIL
+    _META_CIRCUIT_BREAKER_UNTIL = None  # Reset circuit breaker jika admin menyimpan token/pengaturan baru
     if not verify_admin(request, db):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
