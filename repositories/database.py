@@ -4,6 +4,7 @@ Menerapkan Prinsip SOLID:
 - Interface Segregation: Menerapkan IProductRepository, ISettingsRepository, IActivityLogRepository.
 - Open/Closed & Dependency Inversion: Database Connection Factory dan Repositori terisolasi.
 """
+import os
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
