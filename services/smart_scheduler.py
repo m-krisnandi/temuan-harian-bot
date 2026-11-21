@@ -165,13 +165,13 @@ class SmartScheduler:
             it["scheduled_at"] = post_time.strftime("%Y-%m-%d %H:%M")
             it["status"] = "APPROVED"  # Siap terbit otomatis saat jamnya tiba
 
-            # Rotasi Cerdas Postingan (Smart Content Mix):
-            # Slot Pagi (07:30) & Sore (17:00) = Edukasi Murni tanpa link (0% jualan)
-            # Slot Siang (12:15) & Malam (20:00) = Rekomendasi Afiliasi dengan link Shopee
-            if hour in (7, 17):
-                it["post_type"] = it.get("post_type") or "EDUCATION"
+            # Tipe Postingan:
+            # Jika item memiliki affiliate_link, itu adalah produk rekomendasi (AFFILIATE).
+            # Postingan EDUCATION murni hanya untuk konten edukasi tanpa tautan komersial.
+            if it.get("affiliate_link") and it.get("affiliate_link").strip():
+                it["post_type"] = "AFFILIATE"
             else:
-                it["post_type"] = it.get("post_type") or "AFFILIATE"
+                it["post_type"] = it.get("post_type") or "EDUCATION"
 
             scheduled_items.append(it)
 
@@ -182,3 +182,31 @@ class SmartScheduler:
                 scheduled_date += timedelta(days=1)
 
         return scheduled_items
+
+    @classmethod
+    def get_next_slot(cls, scheduled_list: List[Dict[str, Any]]) -> str:
+        """Menemukan slot jadwal berikutnya setelah postingan terakhir di antrean."""
+        now_wib = datetime.now(WIB)
+        latest_time = now_wib
+
+        for it in scheduled_list:
+            sat = it.get("scheduled_at")
+            if sat:
+                try:
+                    dt = datetime.strptime(sat, "%Y-%m-%d %H:%M").replace(tzinfo=WIB)
+                    if dt > latest_time:
+                        latest_time = dt
+                except Exception:
+                    pass
+
+        # Cari slot berikutnya setelah latest_time
+        curr_date = latest_time.date()
+        for hour, minute in PRIME_TIME_SLOTS:
+            candidate = datetime(curr_date.year, curr_date.month, curr_date.day, hour, minute, tzinfo=WIB)
+            if candidate > latest_time + timedelta(minutes=10):
+                return candidate.strftime("%Y-%m-%d %H:%M")
+
+        # Jika hari ini sudah habis, ambil slot pertama besok
+        next_date = curr_date + timedelta(days=1)
+        h, m = PRIME_TIME_SLOTS[0]
+        return datetime(next_date.year, next_date.month, next_date.day, h, m, tzinfo=WIB).strftime("%Y-%m-%d %H:%M")

@@ -43,6 +43,7 @@ from services.shopee_scraper import SHOPEE_CATEGORIES
 from services.captions import build_comment
 from services.smart_scheduler import SmartScheduler
 from services.quality_inspector import QualityInspector
+from services.education_pipeline import EducationContentService
 
 
 # ===================== BACKGROUND SCHEDULER WORKER =====================
@@ -547,6 +548,37 @@ async def admin_action(
         msg = _publish_product_to_channels(db, item)
     else:
         msg = "Aksi tidak dikenali"
+
+    return RedirectResponse(url=f"/admin?tab={redirect_tab}&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.post("/admin/education/create")
+async def admin_create_education_post(
+    request: Request,
+    topic: str = Form(...),
+    category: str = Form("Rumah Tangga & Dekorasi"),
+    search_visual: str = Form(""),
+    redirect_tab: str = Form("products"),
+    db: ProductQueueDB = Depends(get_db)
+):
+    """Membuat postingan edukasi murni (non-komersial) via 4-Stage Content Engine."""
+    if not verify_admin(request, db):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        scheduled_list = db.list_scheduled(limit=100)
+        scheduled_at_str = SmartScheduler.get_next_slot(scheduled_list)
+
+        edu_service = EducationContentService(db=db)
+        item = edu_service.create_and_queue(
+            topic=topic.strip(),
+            category=category,
+            search_query_visual=search_visual.strip() or topic.strip(),
+            scheduled_at=scheduled_at_str
+        )
+        msg = f"Artikel edukasi murni '{item['product_name'][:30]}' berhasil dibuat & dijadwalkan pada {scheduled_at_str} WIB!"
+    except Exception as e:
+        msg = f"Gagal membuat artikel edukasi: {e}"
 
     return RedirectResponse(url=f"/admin?tab={redirect_tab}&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)
 
