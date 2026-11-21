@@ -104,6 +104,13 @@
                     <i data-lucide="book-open" class="w-3.5 h-3.5 text-teal-200"></i>
                     <span>Buat Edukasi Murni</span>
                 </button>
+                <form action="/admin/education/auto-replenish" method="POST" class="inline">
+                    <button type="submit" class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-800/80 hover:bg-teal-700 text-teal-200 border border-teal-600/50 font-bold text-xs shadow-md shadow-teal-950/50 transition active:scale-95" title="Otomatis riset & isi seluruh slot jadwal edukasi kosong 3 hari ke depan">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-300"></i>
+                        <span class="hidden sm:inline">Auto-Riset Edukasi (3 Hari)</span>
+                        <span class="sm:hidden">Auto-Edu</span>
+                    </button>
+                </form>
                 <button type="button" onclick="document.getElementById('modal-single-link').classList.remove('hidden')" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md shadow-indigo-950/50 transition active:scale-95">
                     <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-300"></i>
                     <span>Input 1 Link</span>

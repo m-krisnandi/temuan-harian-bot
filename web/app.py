@@ -50,18 +50,32 @@ from services.education_pipeline import EducationContentService
 
 async def automated_scheduler_worker():
     """Background worker yang memeriksa antrean setiap 60 detik.
-    Jika ada produk APPROVED yang waktu scheduled_at-nya sudah tiba (Asia/Jakarta),
-    secara otomatis dipublikasikan ke media sosial aktif.
+    1. Mempublikasikan produk/konten yang jadwalnya sudah tiba.
+    2. Secara otomatis mengisi slot edukasi murni (07:30 & 17:00 WIB) untuk 3 hari ke depan via 5-Stage Content Engine.
     """
-    print("[SCHEDULER] Background worker aktif memantau antrean (Timezone: Asia/Jakarta)...")
+    print("[SCHEDULER] Background worker aktif memantau antrean & auto-replenish edukasi (Asia/Jakarta)...")
+    cycle_count = 0
     while True:
         try:
             db = get_db()
+            # 1. Cek produk jatuh tempo
             due_product = db.get_due_scheduled()
             if due_product:
-                print(f"[SCHEDULER] Menemukan produk jatuh tempo: {due_product['product_name'][:40]} (Jadwal: {due_product.get('scheduled_at')})")
+                print(f"[SCHEDULER] Menemukan postingan jatuh tempo: {due_product['product_name'][:40]} (Jadwal: {due_product.get('scheduled_at')})")
                 res_msg = _publish_product_to_channels(db, due_product)
                 print(f"[SCHEDULER RESULT] {res_msg}")
+
+            # 2. Auto-Replenish Konten Edukasi Murni setiap 30 siklus (30 menit) atau saat siklus pertama
+            if cycle_count % 30 == 0:
+                try:
+                    edu_service = EducationContentService(db=db)
+                    replenished = edu_service.auto_replenish(days_ahead=3)
+                    if replenished:
+                        print(f"[AUTO-EDU] Berhasil auto-replenish {len(replenished)} konten edukasi murni 3 hari ke depan.")
+                except Exception as edu_err:
+                    print(f"[AUTO-EDU ERROR] {edu_err}")
+
+            cycle_count += 1
         except Exception as e:
             print(f"[SCHEDULER ERROR] {e}")
         await asyncio.sleep(60)
@@ -579,6 +593,26 @@ async def admin_create_education_post(
         msg = f"Artikel edukasi murni '{item['product_name'][:30]}' berhasil dibuat & dijadwalkan pada {scheduled_at_str} WIB!"
     except Exception as e:
         msg = f"Gagal membuat artikel edukasi: {e}"
+
+    return RedirectResponse(url=f"/admin?tab={redirect_tab}&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.post("/admin/education/auto-replenish")
+async def admin_auto_replenish_education(
+    request: Request,
+    redirect_tab: str = Form("products"),
+    db: ProductQueueDB = Depends(get_db)
+):
+    """Memicu pengisian otomatis konten edukasi murni untuk seluruh slot kosong 3 hari ke depan."""
+    if not verify_admin(request, db):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        edu_service = EducationContentService(db=db)
+        created = edu_service.auto_replenish(days_ahead=3)
+        msg = f"Berhasil meriset & menjadwalkan {len(created)} konten edukasi murni (5-Stage Engine) untuk 3 hari ke depan!" if created else "Seluruh slot jadwal edukasi 3 hari ke depan sudah terisi rapi."
+    except Exception as e:
+        msg = f"Gagal auto-replenish edukasi: {e}"
 
     return RedirectResponse(url=f"/admin?tab={redirect_tab}&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)
 
