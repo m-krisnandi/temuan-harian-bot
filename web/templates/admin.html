@@ -2038,6 +2038,7 @@
                         honesty_mode: honestyVal
                     })
                 });
+                if (!scriptResp.ok) { const errT = await scriptResp.text(); throw new Error("Gagal naskah: " + errT); }
                 const scriptData = await scriptResp.json();
                 if (!scriptData.ok) {
                     throw new Error(scriptData.message || 'Gagal membuat naskah');
@@ -2055,6 +2056,7 @@
                         voice_name: voiceVal
                     })
                 });
+                if (!ttsResp.ok) { const errT = await ttsResp.text(); throw new Error("Gagal TTS: " + errT); }
                 const ttsData = await ttsResp.json();
                 if (!ttsData.ok) {
                     throw new Error(ttsData.error || 'Gagal membuat suara TTS');
@@ -2072,6 +2074,7 @@
                         voice_name: voiceVal
                     })
                 });
+                if (!renderResp.ok) { const errT = await renderResp.text(); throw new Error("Gagal render video: " + errT); }
                 const renderData = await renderResp.json();
                 if (!renderData.ok) {
                     throw new Error(renderData.error || 'Gagal merender video');

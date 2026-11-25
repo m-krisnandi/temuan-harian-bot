@@ -4,6 +4,7 @@ Menerapkan Prinsip SOLID:
 - Dependency Inversion: Menggunakan dependency injection (Depends) dari core/dependencies.py.
 """
 import os
+import json
 import secrets
 import hashlib
 from typing import Optional, List, Dict, Any
