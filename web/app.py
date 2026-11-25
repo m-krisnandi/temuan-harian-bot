@@ -1184,7 +1184,7 @@ async def api_tiktok_render_video(request: Request, db: ProductQueueDB = Depends
 @app.get("/api/tiktok/recommendation")
 async def api_tiktok_recommendation(item_id: str, db: ProductQueueDB = Depends(get_db)):
     """Mengambil rekomendasi cerdas format & suara video TikTok untuk produk."""
-    product = db.get_product(item_id)
+    product = db.get(item_id)
     if not product:
         raise HTTPException(status_code=404, detail="Produk tidak ditemukan")
     rec = get_recommended_settings(product)
