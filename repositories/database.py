@@ -272,6 +272,14 @@ class ProductRepository(IProductRepository):
         if self._logger:
             self._logger.log("VIDEO_GENERATED", f"Video 9:16 berhasil dibuat untuk ID: {item_id}")
 
+    def update_ai_recommendation(self, item_id: str, rec_dict: Dict[str, Any]) -> None:
+        rec_json = json.dumps(rec_dict, ensure_ascii=False) if isinstance(rec_dict, dict) else str(rec_dict)
+        self._conn.execute(
+            "UPDATE products SET ai_recommendation = ? WHERE item_id = ?",
+            (rec_json, str(item_id))
+        )
+
+
     def update_image(self, item_id: str, image_url: str) -> None:
         self._conn.execute("UPDATE products SET image_url = ? WHERE item_id = ?", (image_url.strip(), str(item_id)))
         if self._logger:
@@ -504,6 +512,7 @@ class ProductQueueDB:
                     ("retry_count", "INTEGER DEFAULT 0"),
                     ("video_script", "TEXT DEFAULT ''"),
                     ("video_thumbnail_url", "TEXT DEFAULT ''"),
+                    ("ai_recommendation", "TEXT DEFAULT ''"),
                 ]
                 for col, col_def in columns_to_add:
                     try:
@@ -661,6 +670,10 @@ class ProductQueueDB:
 
     def update_video(self, item_id: str, video_url: str, thumbnail_url: str = '', script_text: str = '') -> None:
         self.product_repo.update_video(item_id, video_url, thumbnail_url, script_text)
+
+    def update_ai_recommendation(self, item_id: str, rec_dict: Dict[str, Any]) -> None:
+        self.product_repo.update_ai_recommendation(item_id, rec_dict)
+
 
     def update_image(self, item_id: str, image_url: str) -> None:
         self.product_repo.update_image(item_id, image_url)

@@ -37,152 +37,160 @@ TIKTOK_CONTENT_FORMATS = {
 }
 
 
-def get_recommended_settings(product: Dict[str, Any]) -> Dict[str, Any]:
-    """Menghasilkan rekomendasi cerdas pengaturan video TikTok vertikal (format konten, karakter suara,
-    dan mode kejujuran) berdasarkan karakteristik nama produk, kategori, dan harga.
+def get_recommended_settings(
+    product: Dict[str, Any],
+    gemini_client: Optional[GeminiClient] = None,
+    db: Optional[Any] = None,
+    force_refresh: bool = False
+) -> Dict[str, Any]:
+    """Menghasilkan rekomendasi cerdas AI secara DINAMIS menggunakan penalaran Gemini AI.
+    Tidak menggunakan daftar kata kunci kaku (hardcoded), melainkan menganalisis produk apa pun
+    secara kontekstual: psikologi audiens, pain-points, hook video vertikal, dan karakter suara yang pas.
+    Hasil analisis di-cache di database agar instan dan hemat kuota API.
     """
     if not product:
         product = {}
 
-    name = str(product.get("product_name") or "").lower()
-    cat = str(product.get("category") or "").lower()
-    text = f"{name} {cat}"
+    item_id = str(product.get("item_id") or "")
+
+    # 1. Cek cache lokal di product object atau database
+    if not force_refresh:
+        cached_rec = product.get("ai_recommendation")
+        if isinstance(cached_rec, str) and cached_rec.strip():
+            try:
+                parsed = json.loads(cached_rec)
+                if isinstance(parsed, dict) and "format" in parsed and "voice" in parsed:
+                    return parsed
+            except Exception:
+                pass
+        elif isinstance(cached_rec, dict) and "format" in cached_rec and "voice" in cached_rec:
+            return cached_rec
+
+        # Jika belum ada di object tapi db disediakan, coba ambil dari DB
+        if db and item_id:
+            try:
+                db_item = db.get(item_id)
+                if db_item and db_item.get("ai_recommendation"):
+                    parsed = json.loads(db_item["ai_recommendation"])
+                    if isinstance(parsed, dict) and "format" in parsed and "voice" in parsed:
+                        return parsed
+            except Exception:
+                pass
+
+    # 2. Analisis Dinamis Real-Time Menggunakan Gemini AI
     try:
-        price = float(product.get("price") or 0)
-    except (ValueError, TypeError):
-        price = 0
+        ai = gemini_client or GeminiClient(db=db)
+        name = product.get("product_name", "Produk")
+        cat = product.get("category", "General")
+        price = product.get("price", 0)
+        rating = product.get("rating", 0.0)
+        sales = product.get("sales", 0)
+        shop_name = product.get("shop_name", "Official Store")
 
-    # 1. KULINER & MAKANAN
-    food_keywords = [
-        "makanan", "minuman", "snack", "camilan", "keripik", "kerupuk", "biskuit", "kopi", "teh",
-        "sambal", "cokelat", "coklat", "mie", "baso", "bakso", "kuliner", "rendang", "bumbu",
-        "abon", "sirup", "roti", "permen"
-    ]
-    if any(k in text for k in food_keywords):
-        return {
-            "format": "product_showcase",
-            "format_label": "Viral Showcase",
-            "format_reason": "Konten kuliner paling memikat saat menonjolkan visual spill rasa & tekstur yang menggugah selera.",
-            "voice": "Puck",
-            "voice_label": "Puck (Pria - Ceria & Upbeat)",
-            "voice_reason": "Tone Puck yang ceria & energik memicu rasa penasaran dan keinginan jajan spontan.",
-            "honesty_mode": "research_based",
-            "honesty_label": "Research-Based (Objektif)",
-            "honesty_reason": "Fokus pada deskripsi rasa populer & ulasan pembeli tanpa berlebihan.",
-            "badge": "Viral Kuliner & Camilan"
-        }
+        prompt = f"""Anda adalah Creative Director & Algorithm Strategist untuk TikTok Affiliate Video Studio Indonesia.
+Analisis produk berikut secara mendalam untuk menentukan angle video vertikal 9:16 dan karakter suara Gemini TTS yang paling menjual (tinggi konversi & retensi penonton):
 
-    # 2. FASHION & OOTD
-    fashion_keywords = [
-        "baju", "kaos", "tshirt", "kemeja", "celana", "rok", "gamis", "hijab", "jilbab", "dress",
-        "sepatu", "sandal", "sneakers", "tas", "totebag", "backpack", "dompet", "jaket", "hoodie",
-        "cardigan", "outer", "outfit", "fashion", "topi", "kacamata", "jam tangan", "perhiasan",
-        "kalung", "gelang", "cincin"
-    ]
-    if any(k in text for k in fashion_keywords):
-        return {
-            "format": "product_showcase",
-            "format_label": "Viral Showcase",
-            "format_reason": "Produk fashion & OOTD bekerja maksimal dengan showcase visual gaya pakai dan estetika tampilan.",
-            "voice": "Aoede",
-            "voice_label": "Aoede (Wanita - Santai & Hangat)",
-            "voice_reason": "Suara santai & akrab seperti teman ngobrol, sangat disukai audiens konten OOTD/spill racun belanja.",
-            "honesty_mode": "research_based",
-            "honesty_label": "Research-Based (Objektif)",
-            "honesty_reason": "Menjelaskan bahan, potongan pakaian, dan kecocokan gaya berpakaian secara objektif.",
-            "badge": "Fashion & Spill OOTD"
-        }
+Nama Produk: {name}
+Kategori: {cat}
+Harga: Rp {price:,.0f} | Rating: {rating} / 5.0 | Penjualan: {sales}
+Toko: {shop_name}
 
-    is_automotive = any(w in text for w in ["mobil", "motor", "otomotif", "helm", "bengkel"])
+Pilihan Format Konten:
+- problem_solution (Problem & Solution: Buka dari masalah nyata/gangguan sehari-hari -> produk sebagai solusi praktis)
+- product_review (Product Review: Bedah spesifikasi, kelebihan, dan pertimbangan jujur)
+- product_showcase (Viral Showcase: Estetika gaya pakai / unboxing visual / spill racun belanja)
+- top_recommendations (Alasan Wajib Punya: 3 alasan utama kenapa produk ini sangat worth it)
+- educational_explainer (Edukasi Praktis: Tips, trik, atau panduan bermanfaat seputar kategori barang ini)
 
-    # 3. KECANTIKAN & PERAWATAN DIRI
-    beauty_keywords = [
-        "skincare", "serum", "toner", "moisturizer", "sunscreen", "facial", "sabun wajah",
-        "lipstik", "liptint", "lip gloss", "cushion", "bedak", "foundation", "masker",
-        "parfum", "body lotion", "kosmetik", "kecantikan", "haircare", "shampoo", "glow"
-    ]
-    if not is_automotive and any(k in text for k in beauty_keywords):
-        return {
-            "format": "educational_explainer",
-            "format_label": "Edukasi Praktis",
-            "format_reason": "Audiens skincare lebih percaya pada edukasi tips urutan pemakaian dan penjelasan fungsi bahan.",
-            "voice": "Aoede",
-            "voice_label": "Aoede (Wanita - Santai & Hangat)",
-            "voice_reason": "Pembawaan lembut, ramah, dan menenangkan seperti obrolan sesi perawatan diri.",
-            "honesty_mode": "research_based",
-            "honesty_label": "Research-Based (Objektif)",
-            "honesty_reason": "Bebas klaim medis/khasiat instan; merujuk pada komposisi dan petunjuk resmi produk.",
-            "badge": "Edukasi & Tips Cantik"
-        }
+Pilihan Karakter Suara Gemini TTS:
+- Kore (Wanita - Tegas, Jernih, Berwibawa -> Otoritas, meyakinkan fungsi teknis/perkakas/solusi)
+- Puck (Pria - Ceria, Upbeat, Energik -> Viral TikTok, makanan/camilan, promo impulsif)
+- Aoede (Wanita - Santai, Hangat, Akrab -> OOTD, fashion, lifestyle, skincare santai)
+- Charon (Pria - Tenang, Informatif, Terpercaya -> Review gadget, unboxing mendalam)
+- Fenrir (Pria - Dinamis, Cepat, Antusias -> Hook cepat, produk unik/inovatif)
 
-    # 4. GADGET & ELEKTRONIK
-    gadget_keywords = [
-        "tws", "headset", "earphone", "speaker", "bluetooth", "keyboard", "mouse", "charger",
-        "kabel data", "powerbank", "tripod", "ringlight", "holder hp", "smartwatch", "gadget",
-        "elektronik", "kamera", "mic wireless", "adapter", "usb", "hardisk", "ssd", "kipas", "kipas angin", "lampu", "senter"
-    ]
-    if any(k in text for k in gadget_keywords):
-        return {
-            "format": "product_review",
-            "format_label": "Product Review",
-            "format_reason": "Calon pembeli gadget mencari ulasan spesifikasi, kelebihan fitur, dan perbandingan harga.",
-            "voice": "Charon",
-            "voice_label": "Charon (Pria - Informatif & Tenang)",
-            "voice_reason": "Artikulasi tenang, informatif, dan berwibawa memberi kesan review gadget yang terpercaya.",
-            "honesty_mode": "research_based",
-            "honesty_label": "Research-Based (Objektif)",
-            "honesty_reason": "Mengulas parameter teknis, kecocokan perangkat, dan ulasan riil pembeli.",
-            "badge": "Bedah Fitur & Gadget"
-        }
+ATURAN PENALARAN AI:
+1. Pahami apa 'trigger' psikologis penonton TikTok yang membuat mereka berhenti scrolling dan ingin checkout produk ini.
+2. Tentukan format terbaik beserta alasan tajamnya ('format_reason').
+3. Tentukan karakter suara terbaik beserta alasan psikologisnya ('voice_reason').
+4. Berikan label badge singkat (2-4 kata) yang mencerminkan inti penawaran barang ('badge').
+5. Hindari asumsi kaku/klise; analisis secara kontekstual berbasis barang tersebut.
 
-    # 5. PERKAKAS, PERTUKANGAN, ALAT RUMAH TANGGA & OTOMOTIF
-    tools_keywords = [
-        "bor", "mata bor", "obeng", "kunci pas", "tang", "baut", "palu", "lem", "perekat",
-        "sealant", "cat", "pembersih", "sabun cuci", "sikat", "lap", "otomotif", "motor",
-        "mobil", "helm", "jas hujan", "semprotan", "pertukangan", "perkakas", "pompa", "kran",
-        "saringan", "dapur", "rak", "organizer", "gantungan baju", "gantungan dinding", "sapu", "pel", "pengharum"
-    ]
-    if any(k in text for k in tools_keywords):
-        return {
-            "format": "problem_solution",
-            "format_label": "Problem & Solution",
-            "format_reason": "Kategori fungsional & perkakas paling tinggi konversi saat diawali solusi masalah menjengkelkan.",
-            "voice": "Kore",
-            "voice_label": "Kore (Wanita - Tegas & Jernih)",
-            "voice_reason": "Karakter vokal tegas, jelas, dan percaya diri untuk mendemonstrasikan keandalan alat.",
-            "honesty_mode": "research_based",
-            "honesty_label": "Research-Based (Objektif)",
-            "honesty_reason": "Menjelaskan fungsi dan cara pemakaian alat dengan akurat sesuai peruntukan.",
-            "badge": "Solusi Praktis & Perkakas"
-        }
+Kembalikan HANYA format JSON valid berikut:
+{{
+  "format": "problem_solution",
+  "format_label": "Problem & Solution",
+  "format_reason": "Alasan psikologis & daya tarik format ini untuk produk tersebut",
+  "voice": "Kore",
+  "voice_label": "Kore (Wanita - Tegas & Jernih)",
+  "voice_reason": "Alasan pemilihan karakter suara untuk target pembeli produk ini",
+  "honesty_mode": "research_based",
+  "honesty_label": "Research-Based (Objektif)",
+  "badge": "Badge Singkat"
+}}"""
 
-    # 6. PRODUK HEMAT / DISKON TINGGI (Harga < 40.000)
-    if 0 < price <= 40000:
-        return {
-            "format": "top_recommendations",
-            "format_label": "Alasan Wajib Punya",
-            "format_reason": "Produk murah meriah lebih cepat di-checkout saat dirangkum dalam 3 alasan kenapa worth it.",
-            "voice": "Puck",
-            "voice_label": "Puck (Pria - Ceria & Upbeat)",
-            "voice_reason": "Nada cepat & ceria memicu urgensi belanja dan antusiasme audiens TikTok.",
-            "honesty_mode": "research_based",
-            "honesty_label": "Research-Based (Objektif)",
-            "honesty_reason": "Menyorot perbandingan harga terjangkau dengan kegunaan sehari-hari.",
-            "badge": "Hemat & Layak Checkout"
-        }
+        res_text = ai.generate_content(prompt, temperature=0.6, timeout=20)
+        data = None
+        if res_text:
+            text = res_text.strip()
+            m = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+            if m:
+                text = m.group(1)
+            else:
+                s = text.find("{")
+                e = text.rfind("}")
+                if s != -1 and e != -1 and e > s:
+                    text = text[s:e+1]
+            try:
+                data = json.loads(text)
+            except Exception:
+                data = None
 
-    # 7. DEFAULT / KEBUTUHAN UMUM
+        if data and "format" in data and "voice" in data:
+            format_labels = {
+                "problem_solution": "Problem & Solution",
+                "product_review": "Product Review",
+                "product_showcase": "Viral Showcase",
+                "top_recommendations": "Alasan Wajib Punya",
+                "educational_explainer": "Edukasi Praktis"
+            }
+            voice_labels = {
+                "Kore": "Kore (Wanita - Tegas & Jernih)",
+                "Puck": "Puck (Pria - Ceria & Upbeat)",
+                "Aoede": "Aoede (Wanita - Santai & Hangat)",
+                "Charon": "Charon (Pria - Informatif & Tenang)",
+                "Fenrir": "Fenrir (Pria - Dinamis & Cepat)"
+            }
+            data["format_label"] = format_labels.get(data.get("format"), data.get("format_label", "Problem & Solution"))
+            data["voice_label"] = voice_labels.get(data.get("voice"), data.get("voice_label", "Kore (Wanita - Tegas & Jernih)"))
+            data["honesty_mode"] = data.get("honesty_mode", "research_based")
+            data["honesty_label"] = "Research-Based (Objektif)"
+            if not data.get("badge"):
+                data["badge"] = "Rekomendasi Cerdas AI"
+
+            # Simpan ke cache database jika ada DB dan item_id
+            if db and item_id:
+                try:
+                    db.update_ai_recommendation(item_id, data)
+                except Exception as e:
+                    print(f"[CACHE AI REC ERROR] {e}")
+
+            return data
+
+    except Exception as e:
+        print(f"[TIKTOK DYNAMIC AI REC ERROR] {e}")
+
+    # 3. Fallback Universal (Jika API Gemini offline/unreachable)
     return {
         "format": "problem_solution",
         "format_label": "Problem & Solution",
-        "format_reason": "Format standar emas affiliate TikTok: membedah masalah umum dan menghadirkan produk sebagai solusi.",
+        "format_reason": "Format paling universal dan berkonversi tinggi untuk TikTok: menyorot solusi kepraktisan harian.",
         "voice": "Kore",
         "voice_label": "Kore (Wanita - Tegas & Jernih)",
-        "voice_reason": "Karakter suara jernih, lugas, dan profesional untuk membangun rasa percaya audiens.",
+        "voice_reason": "Karakter suara jernih dan meyakinkan untuk audiens umum Indonesia.",
         "honesty_mode": "research_based",
         "honesty_label": "Research-Based (Objektif)",
-        "honesty_reason": "Menjaga kejujuran ulasan berbasis data produk tanpa klaim berlebihan.",
-        "badge": "Rekomendasi Teruji"
+        "badge": "Rekomendasi AI"
     }
 
 

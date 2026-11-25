@@ -1182,10 +1182,14 @@ async def api_tiktok_render_video(request: Request, db: ProductQueueDB = Depends
 
 
 @app.get("/api/tiktok/recommendation")
-async def api_tiktok_recommendation(item_id: str, db: ProductQueueDB = Depends(get_db)):
-    """Mengambil rekomendasi cerdas format & suara video TikTok untuk produk."""
+async def api_tiktok_recommendation(
+    item_id: str,
+    refresh: bool = False,
+    db: ProductQueueDB = Depends(get_db)
+):
+    """Mengambil rekomendasi cerdas format & suara video TikTok untuk produk apa pun secara dinamis dengan Gemini AI."""
     product = db.get(item_id)
     if not product:
         raise HTTPException(status_code=404, detail="Produk tidak ditemukan")
-    rec = get_recommended_settings(product)
+    rec = get_recommended_settings(product, db=db, force_refresh=refresh)
     return {"ok": True, "recommendation": rec}

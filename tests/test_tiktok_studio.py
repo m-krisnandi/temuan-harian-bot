@@ -23,41 +23,47 @@ class TestTikTokStudio(unittest.TestCase):
         self.assertIn("educational_explainer", TIKTOK_CONTENT_FORMATS)
 
     def test_get_recommended_settings_mappings(self):
-        # 1. Tools / Pertukangan
-        bor = {"product_name": "Mata Bor Beton Karbida 10mm", "category": "Pertukangan", "price": 45000}
-        rec_bor = get_recommended_settings(bor)
-        self.assertEqual(rec_bor["format"], "problem_solution")
-        self.assertEqual(rec_bor["voice"], "Kore")
+        # 1. Test cached AI recommendation
+        cached_prod = {
+            "item_id": "test_1",
+            "product_name": "Barang Random Unik 2026",
+            "ai_recommendation": '{"format": "viral_showcase", "format_label": "Viral Showcase", "voice": "Aoede", "voice_label": "Aoede (Santai)", "format_reason": "Alasan AI", "voice_reason": "Suara pas", "badge": "Barang Viral"}'
+        }
+        rec = get_recommended_settings(cached_prod)
+        self.assertEqual(rec["format"], "viral_showcase")
+        self.assertEqual(rec["voice"], "Aoede")
+        self.assertEqual(rec["badge"], "Barang Viral")
 
-        # 2. Fashion
-        kaos = {"product_name": "Kaos Polos Oversize Katun Combed 24s", "category": "Fashion Pria", "price": 65000}
-        rec_kaos = get_recommended_settings(kaos)
-        self.assertEqual(rec_kaos["format"], "product_showcase")
-        self.assertEqual(rec_kaos["voice"], "Aoede")
+        # 2. Test dynamic reasoning with mock Gemini AI
+        from unittest.mock import MagicMock
+        mock_gemini = MagicMock()
+        mock_gemini.generate_content.return_value = """{
+            "format": "problem_solution",
+            "format_label": "Problem & Solution",
+            "format_reason": "Produk ini menyelesaikan masalah spesifik",
+            "voice": "Charon",
+            "voice_label": "Charon (Informatif)",
+            "voice_reason": "Artikulasi tenang",
+            "honesty_mode": "research_based",
+            "badge": "Solusi Efektif"
+        }"""
+        random_prod = {
+            "item_id": "test_2",
+            "product_name": "Produk Niche Apa Saja Yang Tidak Pernah Ada Sebelumnya",
+            "category": "Kategori Baru",
+            "price": 75000
+        }
+        dyn_rec = get_recommended_settings(random_prod, gemini_client=mock_gemini)
+        self.assertEqual(dyn_rec["format"], "problem_solution")
+        self.assertEqual(dyn_rec["voice"], "Charon")
+        self.assertEqual(dyn_rec["badge"], "Solusi Efektif")
 
-        # 3. Kuliner / Camilan
-        keripik = {"product_name": "Keripik Kaca Pedas Daun Jeruk 250g", "category": "Makanan & Minuman", "price": 25000}
-        rec_keripik = get_recommended_settings(keripik)
-        self.assertEqual(rec_keripik["format"], "product_showcase")
-        self.assertEqual(rec_keripik["voice"], "Puck")
-
-        # 4. Gadget
-        tws = {"product_name": "TWS Bluetooth 5.3 Bass Earphone", "category": "Aksesoris Handphone", "price": 99000}
-        rec_tws = get_recommended_settings(tws)
-        self.assertEqual(rec_tws["format"], "product_review")
-        self.assertEqual(rec_tws["voice"], "Charon")
-
-        # 5. Skincare
-        serum = {"product_name": "Serum Brightening Niacinamide 10%", "category": "Kecantikan & Perawatan", "price": 85000}
-        rec_serum = get_recommended_settings(serum)
-        self.assertEqual(rec_serum["format"], "educational_explainer")
-        self.assertEqual(rec_serum["voice"], "Aoede")
-
-        # 6. Budget Deal (< 40rb)
-        murah = {"product_name": "Sticker Lucu Pack Aesthetic", "category": "Lainnya", "price": 15000}
-        rec_murah = get_recommended_settings(murah)
-        self.assertEqual(rec_murah["format"], "top_recommendations")
-        self.assertEqual(rec_murah["voice"], "Puck")
+        # 3. Test fallback when Gemini fails
+        mock_fail_gemini = MagicMock()
+        mock_fail_gemini.generate_content.side_effect = RuntimeError("API Offline")
+        fallback_rec = get_recommended_settings(random_prod, gemini_client=mock_fail_gemini)
+        self.assertEqual(fallback_rec["format"], "problem_solution")
+        self.assertEqual(fallback_rec["voice"], "Kore")
 
     def test_video_producer_canvas_render(self):
         producer = TikTokVideoProducer()

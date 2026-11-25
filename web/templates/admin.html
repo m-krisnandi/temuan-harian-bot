@@ -1293,36 +1293,42 @@
                     </div>
 
                     {% set rec = get_tiktok_recommendation(p) %}
-                    <!-- AI Smart Recommendation Card -->
-                    <div class="bg-gradient-to-r from-rose-950/40 via-purple-950/30 to-slate-900/70 p-3.5 rounded-2xl border border-rose-500/30 space-y-2.5 shadow-sm">
+                    <!-- AI Smart Recommendation Card (Dynamic Reasoning) -->
+                    <div id="ai-rec-card-{{ p.item_id }}" data-cached="{% if p.ai_recommendation %}true{% else %}false{% endif %}" class="bg-gradient-to-r from-rose-950/40 via-purple-950/30 to-slate-900/70 p-3.5 rounded-2xl border border-rose-500/30 space-y-2.5 shadow-sm transition-all">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-1.5 text-rose-300 font-bold text-xs">
                                 <i data-lucide="sparkles" class="w-3.5 h-3.5 text-rose-400"></i>
-                                <span>Rekomendasi Cerdas AI (Auto-Matched)</span>
+                                <span>Rekomendasi Cerdas AI (Gemini Reasoning)</span>
                             </div>
-                            <span class="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 text-[10px] font-semibold border border-rose-500/30 flex items-center gap-1">
-                                <span>✨</span> {{ rec.badge }}
-                            </span>
+                            <div class="flex items-center gap-1.5">
+                                <span id="ai-rec-badge-{{ p.item_id }}" class="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 text-[10px] font-semibold border border-rose-500/30 flex items-center gap-1">
+                                    <span>✨</span> <span>{{ rec.badge }}</span>
+                                </span>
+                                <button type="button" id="btn-refresh-rec-{{ p.item_id }}" onclick="refreshAIRecommendation('{{ p.item_id }}')" title="Minta Gemini AI analisis ulang keunikan produk ini" class="px-2 py-0.5 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-500/40 text-rose-300 text-[10px] font-medium flex items-center gap-1 transition shadow-sm">
+                                    <i data-lucide="refresh-cw" id="icon-refresh-rec-{{ p.item_id }}" class="w-3 h-3"></i>
+                                    <span id="text-refresh-rec-{{ p.item_id }}">Analisis AI</span>
+                                </button>
+                            </div>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
                             <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
                                 <span class="text-slate-400 text-[10px] block font-medium">Format Disarankan:</span>
-                                <span class="text-white font-bold text-xs flex items-center gap-1 mt-0.5">
+                                <span id="ai-rec-format-label-{{ p.item_id }}" class="text-white font-bold text-xs flex items-center gap-1 mt-0.5">
                                     <span class="text-amber-400">★</span> {{ rec.format_label }}
                                 </span>
-                                <p class="text-slate-400 text-[10px] leading-relaxed mt-1">{{ rec.format_reason }}</p>
+                                <p id="ai-rec-format-reason-{{ p.item_id }}" class="text-slate-400 text-[10px] leading-relaxed mt-1">{{ rec.format_reason }}</p>
                             </div>
                             <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
                                 <span class="text-slate-400 text-[10px] block font-medium">Karakter Suara Disarankan:</span>
-                                <span class="text-white font-bold text-xs flex items-center gap-1 mt-0.5">
+                                <span id="ai-rec-voice-label-{{ p.item_id }}" class="text-white font-bold text-xs flex items-center gap-1 mt-0.5">
                                     <span class="text-rose-400">🎙️</span> {{ rec.voice_label }}
                                 </span>
-                                <p class="text-slate-400 text-[10px] leading-relaxed mt-1">{{ rec.voice_reason }}</p>
+                                <p id="ai-rec-voice-reason-{{ p.item_id }}" class="text-slate-400 text-[10px] leading-relaxed mt-1">{{ rec.voice_reason }}</p>
                             </div>
                         </div>
                         <div class="flex items-center justify-between text-[10px] text-slate-400 pt-0.5 border-t border-slate-800/60">
                             <span>Mode Kejujuran: <strong class="text-emerald-400">{{ rec.honesty_label }}</strong></span>
-                            <span class="text-slate-500 italic">Pengaturan di bawah sudah otomatis disesuaikan</span>
+                            <span id="ai-rec-status-{{ p.item_id }}" class="text-slate-500 italic">Pengaturan di bawah otomatis disesuaikan AI</span>
                         </div>
                     </div>
 
@@ -1925,6 +1931,71 @@
             if (modal) {
                 modal.classList.remove('hidden');
                 document.body.style.overflow = 'hidden';
+                // Jika belum dianalisis oleh Gemini AI, lakukan analisis otomatis di background
+                const card = document.getElementById('ai-rec-card-' + itemId);
+                if (card && card.getAttribute('data-cached') !== 'true') {
+                    refreshAIRecommendation(itemId, false);
+                }
+            }
+        }
+
+        async function refreshAIRecommendation(itemId, isManual = true) {
+            const btn = document.getElementById('btn-refresh-rec-' + itemId);
+            const icon = document.getElementById('icon-refresh-rec-' + itemId);
+            const text = document.getElementById('text-refresh-rec-' + itemId);
+            const status = document.getElementById('ai-rec-status-' + itemId);
+            const card = document.getElementById('ai-rec-card-' + itemId);
+
+            if (btn) btn.disabled = true;
+            if (icon) icon.classList.add('animate-spin');
+            if (text) text.innerText = 'Analisis AI...';
+            if (status) status.innerText = 'Gemini AI sedang menelaah psikologi & keunikan produk...';
+
+            try {
+                const url = '/api/tiktok/recommendation?item_id=' + itemId + (isManual ? '&refresh=true' : '');
+                const resp = await fetch(url);
+                const data = await resp.json();
+                if (data && data.ok && data.recommendation) {
+                    const rec = data.recommendation;
+
+                    // Tandai sudah di-cache
+                    if (card) card.setAttribute('data-cached', 'true');
+
+                    // Update UI Card
+                    const badgeEl = document.getElementById('ai-rec-badge-' + itemId);
+                    if (badgeEl) badgeEl.innerHTML = '<span>✨</span> <span>' + (rec.badge || 'Rekomendasi AI') + '</span>';
+
+                    const formatLabelEl = document.getElementById('ai-rec-format-label-' + itemId);
+                    if (formatLabelEl) formatLabelEl.innerHTML = '<span class="text-amber-400">★</span> ' + rec.format_label;
+
+                    const formatReasonEl = document.getElementById('ai-rec-format-reason-' + itemId);
+                    if (formatReasonEl) formatReasonEl.innerText = rec.format_reason;
+
+                    const voiceLabelEl = document.getElementById('ai-rec-voice-label-' + itemId);
+                    if (voiceLabelEl) voiceLabelEl.innerHTML = '<span class="text-rose-400">🎙️</span> ' + rec.voice_label;
+
+                    const voiceReasonEl = document.getElementById('ai-rec-voice-reason-' + itemId);
+                    if (voiceReasonEl) voiceReasonEl.innerText = rec.voice_reason;
+
+                    // Update Dropdown Values
+                    const formatSel = document.getElementById('sel-format-' + itemId);
+                    if (formatSel && rec.format) formatSel.value = rec.format;
+
+                    const voiceSel = document.getElementById('sel-voice-' + itemId);
+                    if (voiceSel && rec.voice) voiceSel.value = rec.voice;
+
+                    const honestySel = document.getElementById('sel-honesty-' + itemId);
+                    if (honestySel && rec.honesty_mode) honestySel.value = rec.honesty_mode;
+
+                    if (status) status.innerText = 'Rekomendasi Gemini AI terbaru aktif!';
+                }
+            } catch (err) {
+                console.error('Error refresh AI rec:', err);
+                if (status) status.innerText = 'Gagal memuat analisis AI terbaru.';
+            } finally {
+                if (btn) btn.disabled = false;
+                if (icon) icon.classList.remove('animate-spin');
+                if (text) text.innerText = 'Analisis AI';
             }
         }
 
