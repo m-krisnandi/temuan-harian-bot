@@ -93,13 +93,15 @@ def get_recommended_settings(product: Dict[str, Any]) -> Dict[str, Any]:
             "badge": "Fashion & Spill OOTD"
         }
 
+    is_automotive = any(w in text for w in ["mobil", "motor", "otomotif", "helm", "bengkel"])
+
     # 3. KECANTIKAN & PERAWATAN DIRI
     beauty_keywords = [
         "skincare", "serum", "toner", "moisturizer", "sunscreen", "facial", "sabun wajah",
         "lipstik", "liptint", "lip gloss", "cushion", "bedak", "foundation", "masker",
         "parfum", "body lotion", "kosmetik", "kecantikan", "haircare", "shampoo", "glow"
     ]
-    if any(k in text for k in beauty_keywords):
+    if not is_automotive and any(k in text for k in beauty_keywords):
         return {
             "format": "educational_explainer",
             "format_label": "Edukasi Praktis",
@@ -117,7 +119,7 @@ def get_recommended_settings(product: Dict[str, Any]) -> Dict[str, Any]:
     gadget_keywords = [
         "tws", "headset", "earphone", "speaker", "bluetooth", "keyboard", "mouse", "charger",
         "kabel data", "powerbank", "tripod", "ringlight", "holder hp", "smartwatch", "gadget",
-        "elektronik", "kamera", "mic wireless", "adapter", "usb", "hardisk", "ssd"
+        "elektronik", "kamera", "mic wireless", "adapter", "usb", "hardisk", "ssd", "kipas", "kipas angin", "lampu", "senter"
     ]
     if any(k in text for k in gadget_keywords):
         return {
