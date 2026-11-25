@@ -264,6 +264,14 @@ class ProductRepository(IProductRepository):
     def update_caption(self, item_id: str, caption: str) -> None:
         self._conn.execute("UPDATE products SET caption = ? WHERE item_id = ?", (caption, str(item_id)))
 
+    def update_video(self, item_id: str, video_url: str, thumbnail_url: str = '', script_text: str = '') -> None:
+        self._conn.execute(
+            "UPDATE products SET video_url = ?, video_thumbnail_url = ?, video_script = ?, media_type = 'VIDEO' WHERE item_id = ?",
+            (video_url, thumbnail_url, script_text, str(item_id))
+        )
+        if self._logger:
+            self._logger.log("VIDEO_GENERATED", f"Video 9:16 berhasil dibuat untuk ID: {item_id}")
+
     def update_image(self, item_id: str, image_url: str) -> None:
         self._conn.execute("UPDATE products SET image_url = ? WHERE item_id = ?", (image_url.strip(), str(item_id)))
         if self._logger:
@@ -494,6 +502,8 @@ class ProductQueueDB:
                     ("rejection_reason", "TEXT DEFAULT ''"),
                     ("post_type", "TEXT DEFAULT 'AFFILIATE'"),
                     ("retry_count", "INTEGER DEFAULT 0"),
+                    ("video_script", "TEXT DEFAULT ''"),
+                    ("video_thumbnail_url", "TEXT DEFAULT ''"),
                 ]
                 for col, col_def in columns_to_add:
                     try:
@@ -648,6 +658,9 @@ class ProductQueueDB:
 
     def update_caption(self, item_id: str, caption: str) -> None:
         self.product_repo.update_caption(item_id, caption)
+
+    def update_video(self, item_id: str, video_url: str, thumbnail_url: str = '', script_text: str = '') -> None:
+        self.product_repo.update_video(item_id, video_url, thumbnail_url, script_text)
 
     def update_image(self, item_id: str, image_url: str) -> None:
         self.product_repo.update_image(item_id, image_url)

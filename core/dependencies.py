@@ -2,6 +2,9 @@
 Menyediakan instansiasi objek dan injeksi ketergantungan untuk Web Controller (FastAPI) dan CLI Pipeline.
 """
 import os
+import secrets
+import hashlib
+import hmac
 from pathlib import Path
 from typing import Optional, List
 
@@ -110,12 +113,42 @@ def get_ads_manager(db: Optional[ProductQueueDB] = None) -> Optional[IAdsManager
 def get_admin_secret(db: Optional[ProductQueueDB] = None) -> str:
     """Mengambil password/secret admin dari DB atau environment variable."""
     db_instance = db or get_db()
-    return db_instance.get_setting("admin_secret") or os.getenv("ADMIN_SECRET", "temuanharian2026admin")
+    secret = db_instance.get_setting("admin_secret") or os.getenv("ADMIN_SECRET")
+    if not secret:
+        is_prod = os.getenv("ENV") == "production" or os.getenv("ENVIRONMENT") == "production"
+        if is_prod:
+            raise RuntimeError("ADMIN_SECRET wajib dikonfigurasi di lingkungan produksi.")
+        return "temuanharian_dev_secret_2026"
+    return secret
+
+
+def get_admin_session_token(secret: str) -> str:
+    """Membuat session token HMAC dari admin secret."""
+    return hmac.new(secret.encode("utf-8"), b"temuan_harian_admin_session_salt", hashlib.sha256).hexdigest()
 
 
 def verify_admin(request, db: Optional[ProductQueueDB] = None) -> bool:
-    """Verifikasi token admin dari cookie atau query string."""
+    """Verifikasi token admin dari cookie atau header Authorization secara constant-time."""
     db_instance = db or get_db()
     admin_secret = get_admin_secret(db_instance)
-    token = request.cookies.get("admin_token") or request.query_params.get("key")
-    return token == admin_secret
+    expected_session = get_admin_session_token(admin_secret)
+
+    # 1. Check Bearer Authorization Header
+    auth_header = request.headers.get("authorization") or request.headers.get("Authorization") or ""
+    if auth_header.startswith("Bearer "):
+        bearer = auth_header[7:].strip()
+        if secrets.compare_digest(bearer, admin_secret) or secrets.compare_digest(bearer, expected_session):
+            return True
+
+    # 2. Check Cookie
+    cookie_token = request.cookies.get("admin_token")
+    if cookie_token:
+        if secrets.compare_digest(cookie_token, expected_session) or secrets.compare_digest(cookie_token, admin_secret):
+            return True
+
+    # 3. Check Query Parameter (for backward compatibility)
+    query_key = request.query_params.get("key")
+    if query_key and secrets.compare_digest(query_key, admin_secret):
+        return True
+
+    return False

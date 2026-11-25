@@ -2,8 +2,11 @@
 Menerapkan IProductScraper (Single Responsibility & Interface Segregation).
 Mengambil foto & video resmi asli dari penjual (REAL SELLER MEDIA, BUKAN AI).
 Menggunakan user-agent WhatsApp untuk bypass anti-bot dan mengekstrak OpenGraph metadata resmi.
+Dilengkapi proteksi pertahanan SSRF (Server-Side Request Forgery).
 """
 import re
+import ipaddress
+import socket
 import urllib.request
 import urllib.parse
 from typing import Dict, Any, Optional
@@ -63,6 +66,34 @@ _CATEGORY_KEYWORDS = {
 }
 
 
+def is_safe_url(url: str) -> bool:
+    """Proteksi SSRF: Validasi skema, host, dan larang akses ke private/loopback IP."""
+    try:
+        parsed = urllib.parse.urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            return False
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+        hostname_lower = hostname.lower()
+        if hostname_lower in ("localhost", "127.0.0.1", "::1", "0.0.0.0", "169.254.169.254"):
+            return False
+
+        # Verifikasi IP address apakah berada dalam range private RFC 1918 / loopback
+        try:
+            addr_info = socket.getaddrinfo(hostname, None)
+            for addr in addr_info:
+                ip_str = addr[4][0]
+                ip_obj = ipaddress.ip_address(ip_str)
+                if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local:
+                    return False
+        except Exception:
+            return False
+        return True
+    except Exception:
+        return False
+
+
 def detect_category(title: str) -> str:
     """Mendeteksi kategori produk berdasarkan kata kunci di judul."""
     title_lower = title.lower()
@@ -87,14 +118,18 @@ def extract_item_id(url: str) -> str:
 
 
 def resolve_url(url: str, timeout: int = 10) -> str:
-    """Mengikuti redirect URL pendek jika ada."""
+    """Mengikuti redirect URL pendek jika aman dari SSRF."""
+    if not is_safe_url(url):
+        return url
+
     req = urllib.request.Request(
         url,
         headers={"User-Agent": "WhatsApp/2.21.12.21 A"}
     )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.geturl()
+            final_url = resp.geturl()
+            return final_url if is_safe_url(final_url) else url
     except Exception:
         return url
 
@@ -105,6 +140,9 @@ class ShopeePublicScraper(IProductScraper):
     """
 
     def scrape_preview(self, url: str) -> Dict[str, Any]:
+        if not is_safe_url(url):
+            raise ValueError("URL yang dimasukkan tidak valid atau mengarah ke target jaringan privat/terlarang.")
+
         resolved = resolve_url(url)
         item_id = extract_item_id(resolved)
 

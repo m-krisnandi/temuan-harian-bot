@@ -5,3 +5,6 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+web/static/videos/*.mp4
+web/static/audio/*.mp3
+web/static/thumbnails/*.jpg

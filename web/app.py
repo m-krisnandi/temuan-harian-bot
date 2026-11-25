@@ -37,6 +37,7 @@ from core.dependencies import (
     get_product_scraper,
     get_ads_manager,
     get_admin_secret,
+    get_admin_session_token,
     verify_admin,
 )
 from services.shopee_scraper import SHOPEE_CATEGORIES
@@ -399,10 +400,9 @@ async def admin_dashboard(
     view_mode: str = "timeline",
     db: ProductQueueDB = Depends(get_db)
 ):
-    token = request.cookies.get("admin_token") or key
-    admin_secret = get_admin_secret(db)
-    if token != admin_secret:
+    if not verify_admin(request, db):
         return templates.TemplateResponse(request=request, name="login.html", context={"request": request, "error": msg})
+    admin_secret = get_admin_secret(db)
 
     metrics = db.get_metrics()
     logs = db.list_logs(limit=25)
@@ -502,17 +502,19 @@ async def admin_dashboard(
             "msg": msg,
         }
     )
-    if key == admin_secret:
-        response.set_cookie("admin_token", admin_secret, max_age=86400 * 30, httponly=True)
+    if key and secrets.compare_digest(key, admin_secret):
+        session_token = get_admin_session_token(admin_secret)
+        response.set_cookie("admin_token", session_token, max_age=86400 * 30, httponly=True)
     return response
 
 
 @app.post("/admin/login")
 async def admin_login(password: str = Form(...), db: ProductQueueDB = Depends(get_db)):
     admin_secret = get_admin_secret(db)
-    if password == admin_secret:
+    if secrets.compare_digest(password.strip(), admin_secret.strip()):
         resp = RedirectResponse(url="/admin", status_code=status.HTTP_303_SEE_OTHER)
-        resp.set_cookie("admin_token", admin_secret, max_age=86400 * 30, httponly=True)
+        session_token = get_admin_session_token(admin_secret)
+        resp.set_cookie("admin_token", session_token, max_age=86400 * 30, httponly=True)
         return resp
     return RedirectResponse(url="/admin?msg=Kunci+akses+tidak+valid", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -1064,3 +1066,114 @@ async def create_ad_campaign(
         msg = f"Gagal+membuat+iklan:+{str(e)}"
 
     return RedirectResponse(url=f"/admin?tab=settings&msg={msg}", status_code=status.HTTP_303_SEE_OTHER)
+
+
+# ===================== TIKTOK AFFILIATE AI STUDIO API =====================
+
+@app.post("/api/tiktok/analyze")
+async def api_tiktok_analyze(request: Request, db: ProductQueueDB = Depends(get_db)):
+    if not verify_admin(request, db):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    body = await request.json()
+    item_id = body.get("item_id")
+    product = db.get(item_id) if item_id else body.get("product")
+    if not product:
+        raise HTTPException(status_code=404, detail="Produk tidak ditemukan")
+    from services.tiktok_script import TikTokContentStudioService
+    studio = TikTokContentStudioService(db=db)
+    res = studio.analyze_product_opportunity(product)
+    return res
+
+
+@app.post("/api/tiktok/generate-script")
+async def api_tiktok_generate_script(request: Request, db: ProductQueueDB = Depends(get_db)):
+    if not verify_admin(request, db):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    body = await request.json()
+    item_id = body.get("item_id")
+    product = db.get(item_id) if item_id else body.get("product")
+    if not product:
+        raise HTTPException(status_code=404, detail="Produk tidak ditemukan")
+    content_format = body.get("content_format", "problem_solution")
+    duration = int(body.get("duration", 30))
+    honesty_mode = body.get("honesty_mode", "research_based")
+    hook_direction = body.get("hook_direction", "")
+
+    from services.tiktok_script import TikTokContentStudioService
+    studio = TikTokContentStudioService(db=db)
+    res = studio.generate_tiktok_script(
+        product,
+        content_format=content_format,
+        duration_seconds=duration,
+        honesty_mode=honesty_mode,
+        custom_hook_direction=hook_direction
+    )
+    return res
+
+
+@app.post("/api/tiktok/synthesize-tts")
+async def api_tiktok_synthesize_tts(request: Request, db: ProductQueueDB = Depends(get_db)):
+    if not verify_admin(request, db):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    body = await request.json()
+    text = body.get("text", "").strip()
+    voice_name = body.get("voice_name", "Kore")
+    item_id = body.get("item_id", "temp")
+    if not text:
+        raise HTTPException(status_code=400, detail="Teks narasi tidak boleh kosong")
+
+    from services.gemini_tts import GeminiTTSService
+    audio_dir = os.path.join(os.path.dirname(__file__), "static", "audio")
+    os.makedirs(audio_dir, exist_ok=True)
+    audio_filename = f"tts_{item_id}_{voice_name.lower()}.mp3"
+    audio_path = os.path.join(audio_dir, audio_filename)
+
+    tts = GeminiTTSService(db=db)
+    res = tts.synthesize(text=text, voice_name=voice_name, output_path=audio_path)
+    if res.get("ok"):
+        res["audio_url"] = f"/static/audio/{audio_filename}"
+    return res
+
+
+@app.post("/api/tiktok/render-video")
+async def api_tiktok_render_video(request: Request, db: ProductQueueDB = Depends(get_db)):
+    if not verify_admin(request, db):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    body = await request.json()
+    item_id = body.get("item_id")
+    product = db.get(item_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Produk tidak ditemukan")
+
+    script = body.get("script", {})
+    audio_url = body.get("audio_url", "")
+    voice_name = body.get("voice_name", "Kore")
+
+    from services.gemini_tts import GeminiTTSService
+    from services.video_producer import TikTokVideoProducer
+
+    # 1. Pastikan audio voiceover tersedia
+    audio_dir = os.path.join(os.path.dirname(__file__), "static", "audio")
+    os.makedirs(audio_dir, exist_ok=True)
+    audio_filename = f"tts_{item_id}_{voice_name.lower()}.mp3"
+    audio_path = os.path.join(audio_dir, audio_filename)
+
+    if not os.path.exists(audio_path) or not audio_url:
+        vo_text = script.get("full_voiceover_text") or script.get("main_narration") or product.get("product_name")
+        tts = GeminiTTSService(db=db)
+        tts_res = tts.synthesize(text=vo_text, voice_name=voice_name, output_path=audio_path)
+        if not tts_res.get("ok"):
+            return {"ok": False, "error": f"Gagal membuat voiceover: {tts_res.get('error')}"}
+
+    # 2. Render Video 9:16
+    producer = TikTokVideoProducer()
+    vid_res = producer.render_video(product, script, audio_path)
+    if vid_res.get("ok"):
+        script_json_str = json.dumps(script, ensure_ascii=False)
+        db.update_video(
+            item_id=item_id,
+            video_url=vid_res["video_url"],
+            thumbnail_url=vid_res.get("thumbnail_url", ""),
+            script_text=script_json_str
+        )
+    return vid_res

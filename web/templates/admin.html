@@ -529,6 +529,10 @@
                                         <i data-lucide="eye" class="w-3.5 h-3.5 text-indigo-400"></i>
                                         <span>Detail & Caption</span>
                                     </button>
+                                    <button type="button" onclick="openDetailModal('{{ p.item_id }}')" title="Buka TikTok Video Studio" class="bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800/60 text-xs font-semibold py-1.5 px-2.5 rounded-xl transition flex items-center gap-1">
+                                        <i data-lucide="video" class="w-3.5 h-3.5 text-rose-400"></i>
+                                        <span class="hidden sm:inline">9:16</span>
+                                    </button>
 
                                     <form action="/admin/action" method="POST" class="inline">
                                         <input type="hidden" name="item_id" value="{{ p.item_id }}">
@@ -1257,6 +1261,78 @@
                         {{ build_comment(p) }}
                     </div>
                 </div>
+
+                <!-- Section: Studio Video TikTok 9:16 (Cultiv Flow Engine) -->
+                <div class="mt-4 pt-4 border-t border-slate-800/80 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-bold text-white text-xs flex items-center gap-1.5">
+                            <i data-lucide="video" class="w-4 h-4 text-rose-400"></i>
+                            <span>Video Vertikal TikTok 9:16 (Cultiv Engine)</span>
+                        </h4>
+                        <span class="text-[10px] text-slate-400 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-full">1080×1920 • Gemini TTS</span>
+                    </div>
+
+                    <!-- Video Preview Box (Jika sudah dirender) -->
+                    <div id="video-preview-box-{{ p.item_id }}" class="{% if not p.video_url %}hidden{% endif %} bg-slate-900/90 p-4 rounded-2xl border border-rose-500/30 flex flex-col sm:flex-row items-center gap-4">
+                        <div class="w-32 h-56 rounded-xl overflow-hidden bg-black flex-shrink-0 shadow-lg border border-slate-800">
+                            <video id="video-player-{{ p.item_id }}" src="{{ p.video_url or '' }}" controls class="w-full h-full object-cover"></video>
+                        </div>
+                        <div class="flex-grow space-y-2 text-left">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 text-[10px] font-bold">READY TO PUBLISH</span>
+                                <span class="text-slate-400 text-[10px]">9:16 H.264 MP4</span>
+                            </div>
+                            <p class="text-slate-300 text-[11px] leading-relaxed">Video siap tayang lengkap dengan narasi AI natural & safe-area TikTok.</p>
+                            <div class="flex items-center gap-2 pt-1">
+                                <a id="btn-download-video-{{ p.item_id }}" href="{{ p.video_url or '#' }}" download class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs flex items-center gap-1.5 border border-slate-700">
+                                    <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                                    <span>Download MP4</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Generate Video Controls -->
+                    <div class="bg-slate-900/50 p-3.5 rounded-2xl border border-slate-800 space-y-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                            <div>
+                                <label class="block text-slate-400 text-[10px] font-semibold mb-1">Format Konten</label>
+                                <select id="sel-format-{{ p.item_id }}" class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-[11px] outline-none">
+                                    <option value="problem_solution">Problem & Solution</option>
+                                    <option value="product_review">Product Review</option>
+                                    <option value="product_showcase">Viral Showcase</option>
+                                    <option value="top_recommendations">Alasan Wajib Punya</option>
+                                    <option value="educational_explainer">Edukasi Praktis</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 text-[10px] font-semibold mb-1">Karakter Suara (Gemini TTS)</label>
+                                <select id="sel-voice-{{ p.item_id }}" class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-[11px] outline-none">
+                                    <option value="Kore">Kore (Wanita - Tegas & Jernih)</option>
+                                    <option value="Puck">Puck (Pria - Ceria & Upbeat)</option>
+                                    <option value="Aoede">Aoede (Wanita - Santai & Hangat)</option>
+                                    <option value="Charon">Charon (Pria - Informatif & Tenang)</option>
+                                    <option value="Fenrir">Fenrir (Pria - Dinamis & Cepat)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 text-[10px] font-semibold mb-1">Mode Kejujuran</label>
+                                <select id="sel-honesty-{{ p.item_id }}" class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-[11px] outline-none">
+                                    <option value="research_based">Research-Based (Objektif)</option>
+                                    <option value="first_hand">First-Hand (Pernah Pakai)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-2 pt-1">
+                            <span id="video-render-status-{{ p.item_id }}" class="text-[11px] text-slate-400 italic"></span>
+                            <button type="button" id="btn-generate-video-{{ p.item_id }}" onclick="generateTikTokVideo('{{ p.item_id }}')" class="bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-bold py-2 px-3.5 rounded-xl transition flex items-center gap-1.5 shadow-md shadow-rose-950/50 text-xs">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                                <span>⚡ Buat Video TikTok 9:16</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Modal Footer Actions Bar -->
@@ -1790,6 +1866,91 @@
             if (modal) {
                 modal.classList.add('hidden');
                 document.body.style.overflow = 'auto';
+            }
+        }
+
+        async function generateTikTokVideo(itemId) {
+            const statusEl = document.getElementById('video-render-status-' + itemId);
+            const btn = document.getElementById('btn-generate-video-' + itemId);
+            const previewBox = document.getElementById('video-preview-box-' + itemId);
+            const videoPlayer = document.getElementById('video-player-' + itemId);
+            const downloadBtn = document.getElementById('btn-download-video-' + itemId);
+
+            const formatSel = document.getElementById('sel-format-' + itemId);
+            const voiceSel = document.getElementById('sel-voice-' + itemId);
+            const honestySel = document.getElementById('sel-honesty-' + itemId);
+
+            const formatVal = formatSel ? formatSel.value : 'problem_solution';
+            const voiceVal = voiceSel ? voiceSel.value : 'Kore';
+            const honestyVal = honestySel ? honestySel.value : 'research_based';
+
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            try {
+                // Tahap 1 & 2: Riset & Naskah AI
+                statusEl.innerText = '1/3: Menyusun naskah & hook video TikTok...';
+                const scriptResp = await fetch('/api/tiktok/generate-script', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        item_id: itemId,
+                        content_format: formatVal,
+                        duration: 20,
+                        honesty_mode: honestyVal
+                    })
+                });
+                const scriptData = await scriptResp.json();
+                if (!scriptData.ok) {
+                    throw new Error(scriptData.message || 'Gagal membuat naskah');
+                }
+                const scriptObj = scriptData.script;
+
+                // Tahap 3: Suara Narasi Gemini Developer TTS
+                statusEl.innerText = '2/3: Mensintesis suara narasi Bahasa Indonesia (' + voiceVal + ')...';
+                const ttsResp = await fetch('/api/tiktok/synthesize-tts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        item_id: itemId,
+                        text: scriptObj.full_voiceover_text,
+                        voice_name: voiceVal
+                    })
+                });
+                const ttsData = await ttsResp.json();
+                if (!ttsData.ok) {
+                    throw new Error(ttsData.error || 'Gagal membuat suara TTS');
+                }
+
+                // Tahap 4: Render Video Vertikal 9:16
+                statusEl.innerText = '3/3: Merender video vertikal 1080×1920 (H.264/AAC)...';
+                const renderResp = await fetch('/api/tiktok/render-video', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        item_id: itemId,
+                        script: scriptObj,
+                        audio_url: ttsData.audio_url,
+                        voice_name: voiceVal
+                    })
+                });
+                const renderData = await renderResp.json();
+                if (!renderData.ok) {
+                    throw new Error(renderData.error || 'Gagal merender video');
+                }
+
+                statusEl.innerText = '✅ Video 9:16 berhasil dibuat!';
+                if (videoPlayer) videoPlayer.src = renderData.video_url;
+                if (downloadBtn) downloadBtn.href = renderData.video_url;
+                if (previewBox) previewBox.classList.remove('hidden');
+
+                if (window.lucide) window.lucide.createIcons();
+            } catch (err) {
+                statusEl.innerText = '❌ Error: ' + err.message;
+                alert('Gagal membuat video: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         }
 

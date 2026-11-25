@@ -110,3 +110,92 @@ Tulis dalam Bahasa Indonesia santai dan to-the-point mengikuti instruksi sistem 
             continue
 
     return None
+
+
+class GeminiClient:
+    def __init__(self, api_key: Optional[str] = None, db = None):
+        self.api_key = api_key or os.getenv("GEMINI_API_KEY", "")
+        self.db = db
+        if not self.api_key and db:
+            try:
+                self.api_key = db.get_setting("gemini_api_key") or ""
+            except Exception:
+                pass
+
+    def _get_api_key(self) -> str:
+        if not self.api_key or not os.getenv('GEMINI_API_KEY'):
+            for p in ['.env', os.path.join(os.path.dirname(__file__), '..', '.env')]:
+                if os.path.exists(p):
+                    try:
+                        with open(p, 'r') as ef:
+                            for l in ef:
+                                if l.strip().startswith('GEMINI_API_KEY='):
+                                    v = l.strip().split('=', 1)[1].strip("' ")
+                                    if v:
+                                        self.api_key = v
+                                        os.environ['GEMINI_API_KEY'] = v
+                                        return v
+                    except Exception:
+                        pass
+        if self.api_key:
+            return self.api_key
+        if self.db:
+            try:
+                val = self.db.get_setting("gemini_api_key")
+                if val:
+                    self.api_key = val
+                    return val
+            except Exception:
+                pass
+        return os.getenv("GEMINI_API_KEY", "")
+
+    def generate_content(
+        self,
+        prompt: str,
+        system_instruction: Optional[str] = None,
+        temperature: float = 0.7,
+        timeout: int = 35
+    ) -> str:
+        key = self._get_api_key()
+        if not key:
+            raise ValueError("GEMINI_API_KEY is not configured.")
+
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": prompt}]
+                }
+            ],
+            "generationConfig": {
+                "temperature": temperature,
+                "maxOutputTokens": 2048
+            }
+        }
+        if system_instruction:
+            payload["systemInstruction"] = {
+                "parts": [{"text": system_instruction}]
+            }
+
+        candidate_models = ["gemini-2.5-flash", "gemini-3.1-flash-lite", "gemini-2.0-flash"]
+        last_err = None
+        for m in candidate_models:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={key}"
+            try:
+                req = urllib.request.Request(
+                    url,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="POST"
+                )
+                with urllib.request.urlopen(req, timeout=timeout) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    candidates = data.get("candidates", [])
+                    if candidates and "content" in candidates[0]:
+                        parts = candidates[0]["content"].get("parts", [])
+                        if parts and "text" in parts[0]:
+                            return parts[0]["text"].strip()
+            except Exception as e:
+                last_err = e
+                continue
+        raise RuntimeError(f"All Gemini models failed: {last_err}")
