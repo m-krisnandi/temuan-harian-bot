@@ -272,6 +272,14 @@ class ProductRepository(IProductRepository):
         if self._logger:
             self._logger.log("VIDEO_GENERATED", f"Video 9:16 berhasil dibuat untuk ID: {item_id}")
 
+    def update_source_video(self, item_id: str, source_video_url: str) -> None:
+        self._conn.execute(
+            "UPDATE products SET source_video_url = ?, media_type = 'VIDEO' WHERE item_id = ?",
+            (source_video_url.strip(), str(item_id))
+        )
+        if self._logger:
+            self._logger.log("SOURCE_VIDEO_UPDATED", f"Video sumber asli diperbarui untuk ID: {item_id}")
+
     def update_ai_recommendation(self, item_id: str, rec_dict: Dict[str, Any]) -> None:
         rec_json = json.dumps(rec_dict, ensure_ascii=False) if isinstance(rec_dict, dict) else str(rec_dict)
         self._conn.execute(
@@ -513,6 +521,7 @@ class ProductQueueDB:
                     ("video_script", "TEXT DEFAULT ''"),
                     ("video_thumbnail_url", "TEXT DEFAULT ''"),
                     ("ai_recommendation", "TEXT DEFAULT ''"),
+                    ("source_video_url", "TEXT DEFAULT ''"),
                 ]
                 for col, col_def in columns_to_add:
                     try:

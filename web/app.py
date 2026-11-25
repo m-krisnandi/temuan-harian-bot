@@ -1168,7 +1168,10 @@ async def api_tiktok_render_video(request: Request, db: ProductQueueDB = Depends
         if not tts_res.get("ok"):
             return {"ok": False, "error": f"Gagal membuat voiceover: {tts_res.get('error')}"}
 
-    # 2. Render Video 9:16
+    if body.get("source_video_url"):
+        product["source_video_url"] = body["source_video_url"]
+
+    # 2. Render Video 9:16 (Mendukung Video Asli Seller atau Ken Burns Motion)
     producer = TikTokVideoProducer()
     vid_res = producer.render_video(product, script, audio_path)
     if vid_res.get("ok"):
@@ -1180,6 +1183,49 @@ async def api_tiktok_render_video(request: Request, db: ProductQueueDB = Depends
             script_text=script_json_str
         )
     return vid_res
+
+
+@app.post("/api/tiktok/upload-source-video")
+async def api_tiktok_upload_source_video(
+    request: Request,
+    db: ProductQueueDB = Depends(get_db)
+):
+    """Menerima upload file video MP4 asli dari pengguna atau link video seller."""
+    if not verify_admin(request, db):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    content_type = request.headers.get("content-type", "")
+    item_id = ""
+    source_url = ""
+
+    upload_dir = os.path.join(os.path.dirname(__file__), "static", "uploads", "videos")
+    os.makedirs(upload_dir, exist_ok=True)
+
+    if "multipart/form-data" in content_type:
+        form = await request.form()
+        item_id = str(form.get("item_id", "")).strip()
+        video_file = form.get("video_file")
+        url_input = str(form.get("source_video_url", "")).strip()
+
+        if hasattr(video_file, "filename") and video_file.filename:
+            filename = f"source_{item_id}_{secrets.token_hex(4)}.mp4"
+            dest_path = os.path.join(upload_dir, filename)
+            content = await video_file.read()
+            with open(dest_path, "wb") as f:
+                f.write(content)
+            source_url = f"/static/uploads/videos/{filename}"
+        elif url_input:
+            source_url = url_input
+    else:
+        body = await request.json()
+        item_id = str(body.get("item_id", "")).strip()
+        source_url = str(body.get("source_video_url", "")).strip()
+
+    if not item_id:
+        raise HTTPException(status_code=400, detail="item_id diperlukan")
+
+    db.update_source_video(item_id, source_url)
+    return {"ok": True, "source_video_url": source_url}
 
 
 @app.get("/api/tiktok/recommendation")

@@ -1292,6 +1292,30 @@
                         </div>
                     </div>
 
+                                        <!-- Media Source Control Card (Video Asli vs Ken Burns Motion) -->
+                    <div class="bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800 space-y-2.5">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-slate-200 font-bold flex items-center gap-1.5">
+                                <i data-lucide="clapperboard" class="w-3.5 h-3.5 text-amber-400"></i>
+                                <span>Visual Gerak Produk</span>
+                            </span>
+                            <span id="badge-media-mode-{{ p.item_id }}" class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold {% if p.source_video_url %}bg-emerald-500/20 text-emerald-300 border border-emerald-500/30{% else %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% endif %}">
+                                {% if p.source_video_url %}🟢 Video Asli Terpasang{% else %}🟡 Ken Burns 3D Motion (Smooth Zoom & Pan){% endif %}
+                            </span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2 pt-0.5 text-[11px]">
+                            <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl border border-slate-700 flex items-center gap-1.5 transition text-xs font-medium">
+                                <i data-lucide="upload" class="w-3.5 h-3.5 text-rose-400"></i>
+                                <span>Unggah Video (MP4)</span>
+                                <input type="file" id="input-source-video-{{ p.item_id }}" accept="video/mp4,video/quicktime" class="hidden" onchange="uploadSourceVideo('{{ p.item_id }}')">
+                            </label>
+                            <input type="text" id="input-source-url-{{ p.item_id }}" value="{{ p.source_video_url or '' }}" placeholder="Atau tempel URL video MP4 seller di sini..." class="flex-grow px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-[11px] outline-none focus:border-rose-500" onchange="saveSourceVideoUrl('{{ p.item_id }}')">
+                        </div>
+                        <div class="text-[10px] text-slate-400 leading-relaxed bg-slate-950/40 p-2 rounded-xl border border-slate-800/60">
+                            💡 <strong>Mode Ganda Otomatis:</strong> Jika file/URL video asli diisi, video asli diputar di dalam kartu produk. Jika kosong, foto produk otomatis digerakkan secara sinematik dengan <strong>Continuous Ken Burns 3D Motion</strong> (kamera zoom in/out & horizontal pan).
+                        </div>
+                    </div>
+
                     {% set rec = get_tiktok_recommendation(p) %}
                     <!-- AI Smart Recommendation Card (Dynamic Reasoning) -->
                     <div id="ai-rec-card-{{ p.item_id }}" data-cached="{% if p.ai_recommendation %}true{% else %}false{% endif %}" class="bg-gradient-to-r from-rose-950/40 via-purple-950/30 to-slate-900/70 p-3.5 rounded-2xl border border-rose-500/30 space-y-2.5 shadow-sm transition-all">
@@ -2007,6 +2031,64 @@
             }
         }
 
+                async function uploadSourceVideo(itemId) {
+            const fileInput = document.getElementById('input-source-video-' + itemId);
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) return;
+            const file = fileInput.files[0];
+            const badge = document.getElementById('badge-media-mode-' + itemId);
+            const urlInput = document.getElementById('input-source-url-' + itemId);
+
+            const formData = new FormData();
+            formData.append('item_id', itemId);
+            formData.append('video_file', file);
+
+            try {
+                if (badge) badge.innerText = "⏳ Mengunggah video...";
+                const res = await fetch('/api/tiktok/upload-source-video', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.ok) {
+                    if (urlInput) urlInput.value = data.source_video_url;
+                    if (badge) {
+                        badge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+                        badge.innerText = "🟢 Video Asli Terpasang";
+                    }
+                } else {
+                    alert("Gagal unggah video: " + (data.error || "Unknown error"));
+                }
+            } catch (err) {
+                alert("Gagal unggah: " + err.message);
+            }
+        }
+
+        async function saveSourceVideoUrl(itemId) {
+            const urlInput = document.getElementById('input-source-url-' + itemId);
+            const badge = document.getElementById('badge-media-mode-' + itemId);
+            const val = urlInput ? urlInput.value.trim() : "";
+
+            try {
+                const res = await fetch('/api/tiktok/upload-source-video', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ item_id: itemId, source_video_url: val })
+                });
+                const data = await res.json();
+                if (data.ok && badge) {
+                    if (val) {
+                        badge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+                        badge.innerText = "🟢 Video Asli Terpasang";
+                    } else {
+                        badge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30";
+                        badge.innerText = "🟡 Ken Burns 3D Motion (Smooth Zoom & Pan)";
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
         async function generateTikTokVideo(itemId) {
             const statusEl = document.getElementById('video-render-status-' + itemId);
             const btn = document.getElementById('btn-generate-video-' + itemId);
@@ -2062,6 +2144,9 @@
                     throw new Error(ttsData.error || 'Gagal membuat suara TTS');
                 }
 
+                const sourceUrlInput = document.getElementById('input-source-url-' + itemId);
+                const sourceUrl = sourceUrlInput ? sourceUrlInput.value.trim() : '';
+
                 // Tahap 4: Render Video Vertikal 9:16
                 statusEl.innerText = '3/3: Merender video vertikal 1080×1920 (H.264/AAC)...';
                 const renderResp = await fetch('/api/tiktok/render-video', {
@@ -2071,7 +2156,8 @@
                         item_id: itemId,
                         script: scriptObj,
                         audio_url: ttsData.audio_url,
-                        voice_name: voiceVal
+                        voice_name: voiceVal,
+                        source_video_url: sourceUrl
                     })
                 });
                 if (!renderResp.ok) { const errT = await renderResp.text(); throw new Error("Gagal render video: " + errT); }
