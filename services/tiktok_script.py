@@ -37,6 +37,153 @@ TIKTOK_CONTENT_FORMATS = {
 }
 
 
+def get_recommended_settings(product: Dict[str, Any]) -> Dict[str, Any]:
+    """Menghasilkan rekomendasi cerdas pengaturan video TikTok vertikal (format konten, karakter suara,
+    dan mode kejujuran) berdasarkan karakteristik nama produk, kategori, dan harga.
+    """
+    if not product:
+        product = {}
+
+    name = str(product.get("product_name") or "").lower()
+    cat = str(product.get("category") or "").lower()
+    text = f"{name} {cat}"
+    try:
+        price = float(product.get("price") or 0)
+    except (ValueError, TypeError):
+        price = 0
+
+    # 1. KULINER & MAKANAN
+    food_keywords = [
+        "makanan", "minuman", "snack", "camilan", "keripik", "kerupuk", "biskuit", "kopi", "teh",
+        "sambal", "cokelat", "coklat", "mie", "baso", "bakso", "kuliner", "rendang", "bumbu",
+        "abon", "sirup", "roti", "permen"
+    ]
+    if any(k in text for k in food_keywords):
+        return {
+            "format": "product_showcase",
+            "format_label": "Viral Showcase",
+            "format_reason": "Konten kuliner paling memikat saat menonjolkan visual spill rasa & tekstur yang menggugah selera.",
+            "voice": "Puck",
+            "voice_label": "Puck (Pria - Ceria & Upbeat)",
+            "voice_reason": "Tone Puck yang ceria & energik memicu rasa penasaran dan keinginan jajan spontan.",
+            "honesty_mode": "research_based",
+            "honesty_label": "Research-Based (Objektif)",
+            "honesty_reason": "Fokus pada deskripsi rasa populer & ulasan pembeli tanpa berlebihan.",
+            "badge": "Viral Kuliner & Camilan"
+        }
+
+    # 2. FASHION & OOTD
+    fashion_keywords = [
+        "baju", "kaos", "tshirt", "kemeja", "celana", "rok", "gamis", "hijab", "jilbab", "dress",
+        "sepatu", "sandal", "sneakers", "tas", "totebag", "backpack", "dompet", "jaket", "hoodie",
+        "cardigan", "outer", "outfit", "fashion", "topi", "kacamata", "jam tangan", "perhiasan",
+        "kalung", "gelang", "cincin"
+    ]
+    if any(k in text for k in fashion_keywords):
+        return {
+            "format": "product_showcase",
+            "format_label": "Viral Showcase",
+            "format_reason": "Produk fashion & OOTD bekerja maksimal dengan showcase visual gaya pakai dan estetika tampilan.",
+            "voice": "Aoede",
+            "voice_label": "Aoede (Wanita - Santai & Hangat)",
+            "voice_reason": "Suara santai & akrab seperti teman ngobrol, sangat disukai audiens konten OOTD/spill racun belanja.",
+            "honesty_mode": "research_based",
+            "honesty_label": "Research-Based (Objektif)",
+            "honesty_reason": "Menjelaskan bahan, potongan pakaian, dan kecocokan gaya berpakaian secara objektif.",
+            "badge": "Fashion & Spill OOTD"
+        }
+
+    # 3. KECANTIKAN & PERAWATAN DIRI
+    beauty_keywords = [
+        "skincare", "serum", "toner", "moisturizer", "sunscreen", "facial", "sabun wajah",
+        "lipstik", "liptint", "lip gloss", "cushion", "bedak", "foundation", "masker",
+        "parfum", "body lotion", "kosmetik", "kecantikan", "haircare", "shampoo", "glow"
+    ]
+    if any(k in text for k in beauty_keywords):
+        return {
+            "format": "educational_explainer",
+            "format_label": "Edukasi Praktis",
+            "format_reason": "Audiens skincare lebih percaya pada edukasi tips urutan pemakaian dan penjelasan fungsi bahan.",
+            "voice": "Aoede",
+            "voice_label": "Aoede (Wanita - Santai & Hangat)",
+            "voice_reason": "Pembawaan lembut, ramah, dan menenangkan seperti obrolan sesi perawatan diri.",
+            "honesty_mode": "research_based",
+            "honesty_label": "Research-Based (Objektif)",
+            "honesty_reason": "Bebas klaim medis/khasiat instan; merujuk pada komposisi dan petunjuk resmi produk.",
+            "badge": "Edukasi & Tips Cantik"
+        }
+
+    # 4. GADGET & ELEKTRONIK
+    gadget_keywords = [
+        "tws", "headset", "earphone", "speaker", "bluetooth", "keyboard", "mouse", "charger",
+        "kabel data", "powerbank", "tripod", "ringlight", "holder hp", "smartwatch", "gadget",
+        "elektronik", "kamera", "mic wireless", "adapter", "usb", "hardisk", "ssd"
+    ]
+    if any(k in text for k in gadget_keywords):
+        return {
+            "format": "product_review",
+            "format_label": "Product Review",
+            "format_reason": "Calon pembeli gadget mencari ulasan spesifikasi, kelebihan fitur, dan perbandingan harga.",
+            "voice": "Charon",
+            "voice_label": "Charon (Pria - Informatif & Tenang)",
+            "voice_reason": "Artikulasi tenang, informatif, dan berwibawa memberi kesan review gadget yang terpercaya.",
+            "honesty_mode": "research_based",
+            "honesty_label": "Research-Based (Objektif)",
+            "honesty_reason": "Mengulas parameter teknis, kecocokan perangkat, dan ulasan riil pembeli.",
+            "badge": "Bedah Fitur & Gadget"
+        }
+
+    # 5. PERKAKAS, PERTUKANGAN, ALAT RUMAH TANGGA & OTOMOTIF
+    tools_keywords = [
+        "bor", "mata bor", "obeng", "kunci pas", "tang", "baut", "palu", "lem", "perekat",
+        "sealant", "cat", "pembersih", "sabun cuci", "sikat", "lap", "otomotif", "motor",
+        "mobil", "helm", "jas hujan", "semprotan", "pertukangan", "perkakas", "pompa", "kran",
+        "saringan", "dapur", "rak", "organizer", "gantungan baju", "gantungan dinding", "sapu", "pel", "pengharum"
+    ]
+    if any(k in text for k in tools_keywords):
+        return {
+            "format": "problem_solution",
+            "format_label": "Problem & Solution",
+            "format_reason": "Kategori fungsional & perkakas paling tinggi konversi saat diawali solusi masalah menjengkelkan.",
+            "voice": "Kore",
+            "voice_label": "Kore (Wanita - Tegas & Jernih)",
+            "voice_reason": "Karakter vokal tegas, jelas, dan percaya diri untuk mendemonstrasikan keandalan alat.",
+            "honesty_mode": "research_based",
+            "honesty_label": "Research-Based (Objektif)",
+            "honesty_reason": "Menjelaskan fungsi dan cara pemakaian alat dengan akurat sesuai peruntukan.",
+            "badge": "Solusi Praktis & Perkakas"
+        }
+
+    # 6. PRODUK HEMAT / DISKON TINGGI (Harga < 40.000)
+    if 0 < price <= 40000:
+        return {
+            "format": "top_recommendations",
+            "format_label": "Alasan Wajib Punya",
+            "format_reason": "Produk murah meriah lebih cepat di-checkout saat dirangkum dalam 3 alasan kenapa worth it.",
+            "voice": "Puck",
+            "voice_label": "Puck (Pria - Ceria & Upbeat)",
+            "voice_reason": "Nada cepat & ceria memicu urgensi belanja dan antusiasme audiens TikTok.",
+            "honesty_mode": "research_based",
+            "honesty_label": "Research-Based (Objektif)",
+            "honesty_reason": "Menyorot perbandingan harga terjangkau dengan kegunaan sehari-hari.",
+            "badge": "Hemat & Layak Checkout"
+        }
+
+    # 7. DEFAULT / KEBUTUHAN UMUM
+    return {
+        "format": "problem_solution",
+        "format_label": "Problem & Solution",
+        "format_reason": "Format standar emas affiliate TikTok: membedah masalah umum dan menghadirkan produk sebagai solusi.",
+        "voice": "Kore",
+        "voice_label": "Kore (Wanita - Tegas & Jernih)",
+        "voice_reason": "Karakter suara jernih, lugas, dan profesional untuk membangun rasa percaya audiens.",
+        "honesty_mode": "research_based",
+        "honesty_label": "Research-Based (Objektif)",
+        "honesty_reason": "Menjaga kejujuran ulasan berbasis data produk tanpa klaim berlebihan.",
+        "badge": "Rekomendasi Teruji"
+    }
+
+
 class TikTokContentStudioService:
     def __init__(self, db=None, gemini_client: Optional[GeminiClient] = None):
         self.db = db

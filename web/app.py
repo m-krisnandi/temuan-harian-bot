@@ -45,6 +45,7 @@ from services.captions import build_comment
 from services.smart_scheduler import SmartScheduler
 from services.quality_inspector import QualityInspector
 from services.education_pipeline import EducationContentService
+from services.tiktok_script import get_recommended_settings
 
 
 # ===================== BACKGROUND SCHEDULER WORKER =====================
@@ -150,6 +151,7 @@ app = FastAPI(title="Temuan Harian Hub", version="2.6.0", lifespan=lifespan)
 # Setup Templates & Static Assets
 templates = Jinja2Templates(directory=os.path.join(os.path.dirname(__file__), "templates"))
 templates.env.globals["build_comment"] = build_comment
+templates.env.globals["get_tiktok_recommendation"] = get_recommended_settings
 
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 if os.path.exists(static_dir):
@@ -1177,3 +1179,13 @@ async def api_tiktok_render_video(request: Request, db: ProductQueueDB = Depends
             script_text=script_json_str
         )
     return vid_res
+
+
+@app.get("/api/tiktok/recommendation")
+async def api_tiktok_recommendation(item_id: str, db: ProductQueueDB = Depends(get_db)):
+    """Mengambil rekomendasi cerdas format & suara video TikTok untuk produk."""
+    product = db.get_product(item_id)
+    if not product:
+        raise HTTPException(status_code=404, detail="Produk tidak ditemukan")
+    rec = get_recommended_settings(product)
+    return {"ok": True, "recommendation": rec}

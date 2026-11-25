@@ -1292,34 +1292,101 @@
                         </div>
                     </div>
 
+                    {% set rec = get_tiktok_recommendation(p) %}
+                    <!-- AI Smart Recommendation Card -->
+                    <div class="bg-gradient-to-r from-rose-950/40 via-purple-950/30 to-slate-900/70 p-3.5 rounded-2xl border border-rose-500/30 space-y-2.5 shadow-sm">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-1.5 text-rose-300 font-bold text-xs">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-rose-400"></i>
+                                <span>Rekomendasi Cerdas AI (Auto-Matched)</span>
+                            </div>
+                            <span class="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 text-[10px] font-semibold border border-rose-500/30 flex items-center gap-1">
+                                <span>✨</span> {{ rec.badge }}
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                            <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
+                                <span class="text-slate-400 text-[10px] block font-medium">Format Disarankan:</span>
+                                <span class="text-white font-bold text-xs flex items-center gap-1 mt-0.5">
+                                    <span class="text-amber-400">★</span> {{ rec.format_label }}
+                                </span>
+                                <p class="text-slate-400 text-[10px] leading-relaxed mt-1">{{ rec.format_reason }}</p>
+                            </div>
+                            <div class="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800">
+                                <span class="text-slate-400 text-[10px] block font-medium">Karakter Suara Disarankan:</span>
+                                <span class="text-white font-bold text-xs flex items-center gap-1 mt-0.5">
+                                    <span class="text-rose-400">🎙️</span> {{ rec.voice_label }}
+                                </span>
+                                <p class="text-slate-400 text-[10px] leading-relaxed mt-1">{{ rec.voice_reason }}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between text-[10px] text-slate-400 pt-0.5 border-t border-slate-800/60">
+                            <span>Mode Kejujuran: <strong class="text-emerald-400">{{ rec.honesty_label }}</strong></span>
+                            <span class="text-slate-500 italic">Pengaturan di bawah sudah otomatis disesuaikan</span>
+                        </div>
+                    </div>
+
                     <!-- Generate Video Controls -->
                     <div class="bg-slate-900/50 p-3.5 rounded-2xl border border-slate-800 space-y-3">
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                             <div>
-                                <label class="block text-slate-400 text-[10px] font-semibold mb-1">Format Konten</label>
-                                <select id="sel-format-{{ p.item_id }}" class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-[11px] outline-none">
-                                    <option value="problem_solution">Problem & Solution</option>
-                                    <option value="product_review">Product Review</option>
-                                    <option value="product_showcase">Viral Showcase</option>
-                                    <option value="top_recommendations">Alasan Wajib Punya</option>
-                                    <option value="educational_explainer">Edukasi Praktis</option>
+                                <label class="block text-slate-400 text-[10px] font-semibold mb-1 flex items-center justify-between">
+                                    <span>Format Konten</span>
+                                    <span class="text-[9px] text-rose-400 font-normal">Auto-Selected</span>
+                                </label>
+                                <select id="sel-format-{{ p.item_id }}" class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-[11px] outline-none focus:border-rose-500">
+                                    <option value="problem_solution" {% if rec.format == 'problem_solution' %}selected{% endif %}>
+                                        {% if rec.format == 'problem_solution' %}★ (Disarankan) {% endif %}Problem & Solution
+                                    </option>
+                                    <option value="product_review" {% if rec.format == 'product_review' %}selected{% endif %}>
+                                        {% if rec.format == 'product_review' %}★ (Disarankan) {% endif %}Product Review
+                                    </option>
+                                    <option value="product_showcase" {% if rec.format == 'product_showcase' %}selected{% endif %}>
+                                        {% if rec.format == 'product_showcase' %}★ (Disarankan) {% endif %}Viral Showcase
+                                    </option>
+                                    <option value="top_recommendations" {% if rec.format == 'top_recommendations' %}selected{% endif %}>
+                                        {% if rec.format == 'top_recommendations' %}★ (Disarankan) {% endif %}Alasan Wajib Punya
+                                    </option>
+                                    <option value="educational_explainer" {% if rec.format == 'educational_explainer' %}selected{% endif %}>
+                                        {% if rec.format == 'educational_explainer' %}★ (Disarankan) {% endif %}Edukasi Praktis
+                                    </option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-slate-400 text-[10px] font-semibold mb-1">Karakter Suara (Gemini TTS)</label>
-                                <select id="sel-voice-{{ p.item_id }}" class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-[11px] outline-none">
-                                    <option value="Kore">Kore (Wanita - Tegas & Jernih)</option>
-                                    <option value="Puck">Puck (Pria - Ceria & Upbeat)</option>
-                                    <option value="Aoede">Aoede (Wanita - Santai & Hangat)</option>
-                                    <option value="Charon">Charon (Pria - Informatif & Tenang)</option>
-                                    <option value="Fenrir">Fenrir (Pria - Dinamis & Cepat)</option>
+                                <label class="block text-slate-400 text-[10px] font-semibold mb-1 flex items-center justify-between">
+                                    <span>Karakter Suara (Gemini TTS)</span>
+                                    <span class="text-[9px] text-rose-400 font-normal">Auto-Selected</span>
+                                </label>
+                                <select id="sel-voice-{{ p.item_id }}" class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-[11px] outline-none focus:border-rose-500">
+                                    <option value="Kore" {% if rec.voice == 'Kore' %}selected{% endif %}>
+                                        {% if rec.voice == 'Kore' %}★ (Disarankan) {% endif %}Kore (Wanita - Tegas & Jernih)
+                                    </option>
+                                    <option value="Puck" {% if rec.voice == 'Puck' %}selected{% endif %}>
+                                        {% if rec.voice == 'Puck' %}★ (Disarankan) {% endif %}Puck (Pria - Ceria & Upbeat)
+                                    </option>
+                                    <option value="Aoede" {% if rec.voice == 'Aoede' %}selected{% endif %}>
+                                        {% if rec.voice == 'Aoede' %}★ (Disarankan) {% endif %}Aoede (Wanita - Santai & Hangat)
+                                    </option>
+                                    <option value="Charon" {% if rec.voice == 'Charon' %}selected{% endif %}>
+                                        {% if rec.voice == 'Charon' %}★ (Disarankan) {% endif %}Charon (Pria - Informatif & Tenang)
+                                    </option>
+                                    <option value="Fenrir" {% if rec.voice == 'Fenrir' %}selected{% endif %}>
+                                        {% if rec.voice == 'Fenrir' %}★ (Disarankan) {% endif %}Fenrir (Pria - Dinamis & Cepat)
+                                    </option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-slate-400 text-[10px] font-semibold mb-1">Mode Kejujuran</label>
-                                <select id="sel-honesty-{{ p.item_id }}" class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-[11px] outline-none">
-                                    <option value="research_based">Research-Based (Objektif)</option>
-                                    <option value="first_hand">First-Hand (Pernah Pakai)</option>
+                                <label class="block text-slate-400 text-[10px] font-semibold mb-1 flex items-center justify-between">
+                                    <span>Mode Kejujuran</span>
+                                    <span class="text-[9px] text-emerald-400 font-normal">Objektif</span>
+                                </label>
+                                <select id="sel-honesty-{{ p.item_id }}" class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-white text-[11px] outline-none focus:border-rose-500">
+                                    <option value="research_based" {% if rec.honesty_mode == 'research_based' %}selected{% endif %}>
+                                        ★ (Disarankan) Research-Based (Objektif)
+                                    </option>
+                                    <option value="first_hand" {% if rec.honesty_mode == 'first_hand' %}selected{% endif %}>
+                                        First-Hand (Pernah Pakai)
+                                    </option>
                                 </select>
                             </div>
                         </div>
